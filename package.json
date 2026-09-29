@@ -8,6 +8,7 @@
     "node": ">=24.0.0"
   },
   "scripts": {
+    "setup:local": "node scripts/setup-local.mjs",
     "dev": "pnpm --filter @open-flow/web dev",
     "build": "pnpm --filter @open-flow/web build",
     "lint": "pnpm --filter @open-flow/web lint",

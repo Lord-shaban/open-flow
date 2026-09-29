@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Open Flow · AI media infrastructure",
+  title: "Open Flow · Your creative space",
   description:
-    "A Gemini-first, open-source media gateway. Built for durable workflows and explainable routing.",
+    "Your ideas, brought to life with free image providers. A private creative workspace powered by Kafka and Temporal.",
 };
 
 export default function RootLayout({
