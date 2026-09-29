@@ -1,5 +1,23 @@
 name: open-flow
 services:
+  seaweedfs:
+    image: chrislusf/seaweedfs:4.48
+    command: ["mini", "-dir=/data", "-ip=seaweedfs", "-ip.bind=0.0.0.0"]
+    environment:
+      AWS_ACCESS_KEY_ID: ${OPEN_FLOW_S3_ACCESS_KEY:-open-flow-ci}
+      AWS_SECRET_ACCESS_KEY: ${OPEN_FLOW_S3_SECRET_KEY:-local-storage-ci-only}
+      S3_BUCKET: ${OPEN_FLOW_S3_BUCKET:-open-flow-private}
+    volumes: ["seaweedfs_data:/data"]
+    ports: ["127.0.0.1:8333:8333"]
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "wget -q -O /dev/null http://127.0.0.1:9333/cluster/status",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 30
   postgres:
     image: postgres:16.10
     environment:
@@ -158,6 +176,22 @@ services:
       OPEN_FLOW_HTTP_ADDR: 0.0.0.0:8080
       OPEN_FLOW_TEMPORAL_ADDRESS: temporal:7233
       OPEN_FLOW_KAFKA_BROKER: kafka:29092
+      OPEN_FLOW_DATABASE_URL: postgres://${POSTGRES_USER:-open_flow}:${POSTGRES_PASSWORD:-local-development-only}@postgres:5432/${POSTGRES_DB:-open_flow}?sslmode=disable
+      OPEN_FLOW_OWNER_TOKEN: ${OPEN_FLOW_OWNER_TOKEN:-}
+      OPEN_FLOW_OWNER_ID: ${OPEN_FLOW_OWNER_ID:-00000000-0000-4000-8000-000000000001}
+      OPEN_FLOW_ENCRYPTION_KEYS: ${OPEN_FLOW_ENCRYPTION_KEYS:-}
+      OPEN_FLOW_ENCRYPTION_VERSION: ${OPEN_FLOW_ENCRYPTION_VERSION:-1}
+      OPEN_FLOW_S3_ENDPOINT: http://seaweedfs:8333
+      OPEN_FLOW_S3_BUCKET: ${OPEN_FLOW_S3_BUCKET:-open-flow-private}
+      OPEN_FLOW_S3_REGION: us-east-1
+      OPEN_FLOW_S3_ACCESS_KEY: ${OPEN_FLOW_S3_ACCESS_KEY:-open-flow-ci}
+      OPEN_FLOW_S3_SECRET_KEY: ${OPEN_FLOW_S3_SECRET_KEY:-local-storage-ci-only}
+      OPEN_FLOW_COMFYUI_ENDPOINT: ${OPEN_FLOW_COMFYUI_ENDPOINT:-}
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      seaweedfs:
+        condition: service_healthy
     ports: ["127.0.0.1:8080:8080"]
   worker:
     profiles: ["app"]
@@ -167,11 +201,23 @@ services:
       OPEN_FLOW_TEMPORAL_ADDRESS: temporal:7233
       OPEN_FLOW_KAFKA_BROKER: kafka:29092
       OPEN_FLOW_DATABASE_URL: postgres://${POSTGRES_USER:-open_flow}:${POSTGRES_PASSWORD:-local-development-only}@postgres:5432/${POSTGRES_DB:-open_flow}?sslmode=disable
+      OPEN_FLOW_OWNER_TOKEN: ${OPEN_FLOW_OWNER_TOKEN:-}
+      OPEN_FLOW_OWNER_ID: ${OPEN_FLOW_OWNER_ID:-00000000-0000-4000-8000-000000000001}
+      OPEN_FLOW_ENCRYPTION_KEYS: ${OPEN_FLOW_ENCRYPTION_KEYS:-}
+      OPEN_FLOW_ENCRYPTION_VERSION: ${OPEN_FLOW_ENCRYPTION_VERSION:-1}
+      OPEN_FLOW_S3_ENDPOINT: http://seaweedfs:8333
+      OPEN_FLOW_S3_BUCKET: ${OPEN_FLOW_S3_BUCKET:-open-flow-private}
+      OPEN_FLOW_S3_REGION: us-east-1
+      OPEN_FLOW_S3_ACCESS_KEY: ${OPEN_FLOW_S3_ACCESS_KEY:-open-flow-ci}
+      OPEN_FLOW_S3_SECRET_KEY: ${OPEN_FLOW_S3_SECRET_KEY:-local-storage-ci-only}
+      OPEN_FLOW_COMFYUI_ENDPOINT: ${OPEN_FLOW_COMFYUI_ENDPOINT:-}
     depends_on:
       temporal:
         condition: service_healthy
       migrate:
         condition: service_completed_successfully
+      seaweedfs:
+        condition: service_healthy
   dispatcher:
     profiles: ["app"]
     build: ../services/api
@@ -217,8 +263,14 @@ services:
       context: ..
       dockerfile: apps/web/Dockerfile
     ports: ["127.0.0.1:3000:3000"]
+    environment:
+      OPEN_FLOW_API_URL: http://api:8080
+      OPEN_FLOW_OWNER_TOKEN: ${OPEN_FLOW_OWNER_TOKEN:-}
+      OPEN_FLOW_SECURE_COOKIE: "false"
+    depends_on: [api]
 volumes:
   postgres_data:
   temporal_postgres_data:
   kafka_data:
   redis_data:
+  seaweedfs_data:

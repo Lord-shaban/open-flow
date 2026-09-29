@@ -1,0 +1,15 @@
+DELETE FROM consumer_inbox WHERE aggregate_id IN (SELECT id FROM jobs WHERE kind = 'image');
+DELETE FROM job_event_projections WHERE job_id IN (SELECT id FROM jobs WHERE kind = 'image');
+DELETE FROM outbox WHERE aggregate_id IN (SELECT id FROM jobs WHERE kind = 'image');
+DELETE FROM usage WHERE job_id IN (SELECT id FROM jobs WHERE kind = 'image');
+DELETE FROM artifacts WHERE job_id IN (SELECT id FROM jobs WHERE kind = 'image');
+DELETE FROM attempts WHERE job_id IN (SELECT id FROM jobs WHERE kind = 'image');
+DROP TABLE job_inputs;
+DELETE FROM jobs WHERE kind = 'image';
+ALTER TABLE job_event_projections DROP CONSTRAINT job_event_projections_last_type_check;
+ALTER TABLE job_event_projections ADD CONSTRAINT job_event_projections_last_type_check CHECK (last_type IN ('job.queued','job.succeeded'));
+ALTER TABLE outbox DROP CONSTRAINT outbox_event_type_check;
+ALTER TABLE outbox ADD CONSTRAINT outbox_event_type_check CHECK (event_type IN ('job.queued','job.succeeded'));
+ALTER TABLE artifacts DROP COLUMN deleted_at, DROP COLUMN expires_at;
+ALTER TABLE jobs DROP COLUMN provider, DROP COLUMN model_id, DROP COLUMN aspect_ratio, DROP COLUMN error_code, DROP COLUMN deleted_at;
+ALTER TABLE credentials DROP COLUMN revision;

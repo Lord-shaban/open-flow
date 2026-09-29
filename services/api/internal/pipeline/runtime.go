@@ -27,16 +27,20 @@ type TemporalStarter struct {
 }
 
 func (s TemporalStarter) Start(ctx context.Context, job persistence.Job) (string, error) {
-	if job.Kind != "foundation_probe" || job.WorkflowID != persistence.WorkflowID(job.ID) {
+	if (job.Kind != "foundation_probe" && job.Kind != "image") || job.WorkflowID != persistence.WorkflowID(job.ID) {
 		return "", persistence.ErrInvalid
+	}
+	name := workflows.PersistedProbeWorkflowName
+	if job.Kind == "image" {
+		name = workflows.ImageWorkflowName
 	}
 	run, err := s.Client.ExecuteWorkflow(ctx, client.StartWorkflowOptions{
 		ID: job.WorkflowID, TaskQueue: s.TaskQueue,
 		WorkflowIDConflictPolicy:                 enumspb.WORKFLOW_ID_CONFLICT_POLICY_FAIL,
 		WorkflowIDReusePolicy:                    enumspb.WORKFLOW_ID_REUSE_POLICY_REJECT_DUPLICATE,
 		WorkflowExecutionErrorWhenAlreadyStarted: true,
-		WorkflowExecutionTimeout:                 5 * time.Minute,
-	}, workflows.PersistedProbeWorkflowName, job.ID)
+		WorkflowExecutionTimeout:                 2 * time.Hour,
+	}, name, job.ID)
 	var existing *serviceerror.WorkflowExecutionAlreadyStarted
 	if errors.As(err, &existing) {
 		return existing.RunId, nil

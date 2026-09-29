@@ -1,24 +1,30 @@
 # Local development
 
-## Requirements
+## Full M1 studio
 
-Node.js 24 LTS, pnpm 11.25.0, Go 1.27+, Git; Docker Compose is optional for infrastructure. See [Next.js installation](https://nextjs.org/docs/app/getting-started/installation) for framework runtime requirements. Dependency versions and lockfile are pinned in the repository.
+Requirements: Docker Compose, Node.js 24, pnpm 11.25.0 and Git. Go 1.27 is optional for host-side backend development. Docker Desktop's personal/educational use or an equivalent free Docker Engine installation supplies containers; choose a license appropriate to your environment.
 
 ```sh
-git clone https://github.com/Lord-shaban/open-flow.git
-cd open-flow
 pnpm install --frozen-lockfile
-pnpm dev
+pnpm setup:local
+docker compose --env-file .env -f infra/compose.yaml --profile app up -d --build
 ```
 
-In a second terminal:
+Setup generates a 32-byte owner token, versioned AES key and random local S3 secret in `.env`. It refuses to overwrite an existing file. Keep it private and retain the encryption keys with database backups. The Go binary reads process environment, not dotenv; Compose injects the relevant variables. The web container receives the owner token server-side only.
+
+Web http://localhost:3000 · API http://127.0.0.1:8080 · Temporal UI http://localhost:8088 · private S3 http://127.0.0.1:8333. All host ports bind to loopback. The app profile starts migrations, API, worker, dispatcher, outbox relay, consumer and web. Kafka and Temporal are required, not optional infrastructure substitutes. Redis is an unused optional cache lab.
+
+Unlock the studio using `OPEN_FLOW_OWNER_TOKEN` from `.env`. AI Horde works anonymously. Anonymous prompts/results may be shared. No provider key is needed for Training canvas, which creates procedural images and is explicitly not AI. For real local inference, install ComfyUI with a compatible checkpoint, set `OPEN_FLOW_COMFYUI_ENDPOINT=http://host.docker.internal:8188`, and recreate the API and worker. Checkpoint licensing and available hardware remain your responsibility.
+
+## Host UI development
+
+Start the Docker infrastructure and backend app services, then run the host web app on an available port. The root `.env` is not loaded by Next automatically:
 
 ```sh
-cd services/api
-go run ./cmd/api
+node --env-file=.env apps/web/node_modules/next/dist/bin/next dev apps/web --hostname 127.0.0.1 --port 3001
 ```
 
-Web: http://localhost:3000. API: http://127.0.0.1:8080. The web foundation runs independently; it does not imply a connected backend or provider. Health is process readiness only in M0.
+Alternatively, `pnpm dev` previews the interface without a configured owner session. For a production preview after `pnpm build`, use `node --env-file=.env scripts/start-web.mjs` with port 3000 available. Set `OPEN_FLOW_API_URL` to the host Go API URL. Never use `NEXT_PUBLIC_*` for owner or provider secrets.
 
 ## Checks
 
@@ -28,39 +34,17 @@ pnpm build
 cd services/api
 go fmt ./...
 go vet ./...
-go test -race ./...
+go test ./...
 ```
 
-Check Go formatting before commit: `gofmt -l .` should print no filenames. Race testing on Windows may require a C compiler; use ordinary `go test ./...` locally if unavailable and rely on Linux CI for the race gate.
+Linux CI runs `go test -race ./...` with a real PostgreSQL service and isolated per-test schemas. `OPEN_FLOW_TEST_DATABASE_URL` enables those tests locally; otherwise they explicitly skip. Windows race detection requires a C compiler. CI also runs real Kafka, Temporal and private SeaweedFS probes, `cmd/image-smoke` for provider failure/idempotency/download/retention boundaries, and Playwright browser tests at desktop and mobile widths against the real backend using Training canvas. Hosted provider HTTP fixtures make CI deterministic and incur no image charges.
 
-## Environment and infrastructure
+After starting the infrastructure, `go run ./cmd/temporal-smoke`, `go run ./cmd/kafka-smoke`, `go run ./cmd/pipeline-smoke` and `go run ./cmd/image-smoke` run from `services/api` with the database/S3 environment configured. The image smoke creates its own private bucket and owner; only its own fixtures are removed. It does not use a real provider key. For local random S3 secrets, export the generated values to the host process.
 
-Copy `.env.example` to `.env` only if you need overrides. The Go binary reads process environment; it does not automatically load dotenv. Next reads its own `apps/web/.env.local`. Compose consumes the root `.env`.
+## Operations
 
-```sh
-docker compose -f infra/compose.yaml up -d
-docker compose -f infra/compose.yaml --profile app up --build
-```
+`/healthz` is liveness. Configured `/readyz` checks PostgreSQL and the private S3 bucket; Kafka/Temporal readiness is independently enforced by Compose and probes. Generation acceptance commits a durable dispatch intent even while a worker is unavailable. Stop/start workers to observe recovery; see [system-design labs](system-design-labs.md) and [persistence](persistence.md).
 
-Compose includes PostgreSQL, a single Kafka KRaft broker, topic initialization, Temporal with its own PostgreSQL database, and Temporal UI. Redis is available through the optional cache profile. Object storage is introduced in OF-009. M0 API readiness checks the HTTP foundation only. Never expose development credentials or host ports to the public network.
+Artifacts expire after 30 days, and removal from the library denies new downloads immediately. To collect expired, deleted and orphan objects, stop API and workers first to fence uploads, then run `storage-gc` (dry run by default). Inspect the count, then run `storage-gc --apply` in a configured one-off container. A 24-hour grace period protects recent objects; only owned-format object keys are considered. Restart API/workers afterwards. Do not run apply concurrently with uploads.
 
-Start the learning probes after the infrastructure is healthy:
-
-```sh
-cd services/api
-go run ./cmd/worker
-```
-
-In another terminal:
-
-```sh
-cd services/api
-go run ./cmd/temporal-smoke
-go run ./cmd/kafka-smoke
-```
-
-Temporal UI: http://localhost:8088. Kafka's host listener is 127.0.0.1:9092; containers use kafka:29092. The foundation topic has one partition. These probes make no provider calls. See [system-design labs](system-design-labs.md).
-
-## Persisted pipeline
-
-OF-005 adds explicit migrations, a persisted Temporal workflow, a dispatcher, outbox relay and inbox-backed projection. Follow [durable pipeline setup](persistence.md) to set `OPEN_FLOW_DATABASE_URL`, initialize `open-flow.jobs.v1`, run migrations, then start the worker and crash-recovery smoke probe. The jobs topic has three fixed partitions. The app profile runs these processes continuously. `OPEN_FLOW_TEST_DATABASE_URL` enables isolated-schema PostgreSQL integration tests locally; CI runs them with race detection.
+Encryption rotation: add the new 32-byte base64 key to `OPEN_FLOW_ENCRYPTION_KEYS` under a new positive version and set `OPEN_FLOW_ENCRYPTION_VERSION`. Keep old versions so existing credentials and prompts can still decrypt. Restart API/workers, then rotate credentials through Connections. Revoking a key prevents future resolution and queued submission. Changing the owner token invalidates sessions and signed download links. Use HTTPS and `OPEN_FLOW_SECURE_COOKIE=true` when deploying beyond local development; production authentication/HA are M4 work.

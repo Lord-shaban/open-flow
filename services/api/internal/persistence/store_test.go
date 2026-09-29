@@ -77,13 +77,13 @@ func TestMigrationRoundTripAndChecksum(t *testing.T) {
 	if err := s.Pool.QueryRow(ctx, `SELECT checksum FROM schema_migrations WHERE version = 1`).Scan(&checksum); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := s.Pool.Exec(ctx, `UPDATE schema_migrations SET checksum = 'tampered'`); err != nil {
+	if _, err := s.Pool.Exec(ctx, `UPDATE schema_migrations SET checksum = 'tampered' WHERE version = 1`); err != nil {
 		t.Fatal(err)
 	}
 	if err := s.Migrate(ctx, false); err == nil {
 		t.Fatal("accepted altered applied migration")
 	}
-	if _, err := s.Pool.Exec(ctx, `UPDATE schema_migrations SET checksum = $1`, checksum); err != nil {
+	if _, err := s.Pool.Exec(ctx, `UPDATE schema_migrations SET checksum = $1 WHERE version = 1`, checksum); err != nil {
 		t.Fatal(err)
 	}
 	if err := s.Migrate(ctx, true); err != nil {
@@ -96,7 +96,7 @@ func TestMigrationRoundTripAndChecksum(t *testing.T) {
 		t.Fatal(err)
 	}
 	var tables int
-	if err := s.Pool.QueryRow(ctx, `SELECT count(*) FROM information_schema.tables WHERE table_schema = current_schema()`).Scan(&tables); err != nil || tables != 10 {
+	if err := s.Pool.QueryRow(ctx, `SELECT count(*) FROM information_schema.tables WHERE table_schema = current_schema()`).Scan(&tables); err != nil || tables != 11 {
 		t.Fatalf("tables=%d err=%v", tables, err)
 	}
 }

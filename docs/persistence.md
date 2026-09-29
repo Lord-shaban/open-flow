@@ -1,6 +1,6 @@
 # Durable job pipeline (OF-005)
 
-Implemented: PostgreSQL migrations, internal persisted learning jobs, Temporal dispatch, transactional outbox, Kafka relay and an inbox-backed job-event projection. No provider calls, credential ingestion, public generation endpoints or billing effects are enabled by this slice. Those follow OF-006/007/008/013.
+Implemented: PostgreSQL migrations, internal persisted learning jobs, Temporal dispatch, transactional outbox, Kafka relay and an inbox-backed job-event projection. M1 also implements encrypted credential ingestion, image generation and private storage. See [API](api.md) and [free providers](providers/free-providers.md); usage billing remains planned.
 
 ```mermaid
 sequenceDiagram
@@ -24,7 +24,7 @@ sequenceDiagram
 
 ## Schema and ownership
 
-Migration `001_pipeline` creates owners, encrypted credential records, jobs, attempts, artifacts, usage, outbox, consumer inbox and job-event projections. Credential encryption is a schema contract only; the cryptography and authorized credential API are OF-006. No plaintext credential or prompt column is introduced.
+Migration `001_pipeline` creates owners, credential records, jobs, attempts, artifacts, usage, outbox, consumer inbox and job-event projections. Migration `002_image_studio` adds credential revisions, provider/model/aspect metadata, encrypted prompt inputs, artifact expiry/tombstones and image lifecycle event types. AES-GCM encryption and authorized access are implemented. No plaintext credential or prompt column is introduced; migrations apply transactionally with verified checksums and roll back in reverse order.
 
 Jobs are owned, and composite foreign keys prevent attaching another owner's credential, attempt, artifact or usage record. Owner reads require both owner and job IDs. Application tables use UUIDs, constrained states, UTC-capable timestamps, indexed foreign keys and partial queue indexes. Usage stores decimal amounts with explicit currency and estimated/reported distinction; nothing writes billable usage yet.
 

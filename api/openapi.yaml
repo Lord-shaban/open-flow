@@ -1,70 +1,437 @@
 openapi: 3.1.0
 info:
   title: Open Flow API
-  version: 0.1.0-dev
-  description: Foundation endpoints only. Media generation is planned.
+  version: 0.2.0
+  description: Single-owner free image studio. Kafka distributes lifecycle events; Temporal orchestrates durable image jobs. Gemini image generation is disabled.
 servers:
   - url: http://127.0.0.1:8080
+security:
+  - OwnerBearer: []
 paths:
   /healthz:
     get:
       operationId: liveness
-      summary: HTTP process liveness
+      security: []
       responses:
         "200":
-          description: Process is alive
-          content:
-            application/json:
-              schema:
-                type: object
-                required: [status]
-                properties:
-                  status:
-                    const: ok
+          description: HTTP process alive
   /readyz:
     get:
       operationId: readiness
-      summary: HTTP foundation readiness; infrastructure probes are not configured
+      security: []
+      description: Configured studio checks PostgreSQL and S3. Foundation mode checks HTTP only. Kafka/Temporal have independent probes.
       responses:
         "200":
-          description: HTTP foundation ready
-          content:
-            application/json:
-              schema:
-                type: object
-                required: [status, scope, dependency_checks]
-                properties:
-                  status:
-                    const: ready
-                  scope:
-                    const: http-foundation
-                  dependency_checks:
-                    const: not_configured
+          description: Ready
+        "503":
+          description: PostgreSQL or private S3 unavailable
   /v1:
     get:
       operationId: metadata
-      summary: Service metadata and implemented capabilities
+      security: []
       responses:
         "200":
-          description: Service metadata
+          description: Service version, stage, capabilities and free-provider policy
+  /v1/credentials:
+    get:
+      operationId: listCredentials
+      responses:
+        "200":
+          description: Redacted owned connections
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Credential"
+        default:
+          $ref: "#/components/responses/Error"
+    post:
+      operationId: createCredential
+      requestBody:
+        $ref: "#/components/requestBodies/Credential"
+      responses:
+        "201":
+          $ref: "#/components/responses/Credential"
+        default:
+          $ref: "#/components/responses/Error"
+  /v1/credentials/{id}:
+    parameters:
+      - $ref: "#/components/parameters/ID"
+    put:
+      operationId: rotateCredential
+      description: Only active owned credentials can rotate; provider cannot change. Revoked keys cannot reactivate.
+      requestBody:
+        $ref: "#/components/requestBodies/Credential"
+      responses:
+        "200":
+          $ref: "#/components/responses/Credential"
+        default:
+          $ref: "#/components/responses/Error"
+    delete:
+      operationId: revokeCredential
+      responses:
+        "200":
+          description: Revoked; no credential secret returned
+        default:
+          $ref: "#/components/responses/Error"
+  /v1/credentials/{id}/test:
+    parameters:
+      - $ref: "#/components/parameters/ID"
+    post:
+      operationId: testCredential
+      description: Authentication and catalog discovery only. Does not generate an image.
+      responses:
+        "200":
+          description: Connection available, checked_at timestamp, latency_ms and generation_test false
+        default:
+          $ref: "#/components/responses/Error"
+  /v1/models:
+    get:
+      operationId: discoverModels
+      parameters:
+        - in: query
+          name: provider
+          required: true
+          schema:
+            enum: [horde, cloudflare, comfyui, training, gemini]
+        - in: query
+          name: credential_id
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Verified catalog and timestamp; unavailable/paid models are excluded or unselectable
           content:
             application/json:
               schema:
                 type: object
-                required: [service, version, stage, capabilities]
+                required: [models, verified_at]
                 properties:
-                  service:
-                    const: open-flow
-                  version:
-                    type: string
-                  stage:
-                    const: foundation
-                  capabilities:
+                  models:
                     type: array
                     items:
-                      type: string
+                      $ref: "#/components/schemas/Model"
+                  verified_at:
+                    type: string
+                    format: date-time
+        default:
+          $ref: "#/components/responses/Error"
+  /v1/generations:
+    post:
+      operationId: createGeneration
+      description: Commits encrypted input, job and outbox atomically. Same owner/key/payload replays the job; changed payload is 409. Gemini is blocked. No automatic paid/provider/key fallback.
+      parameters:
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 200
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GenerationInput"
+      responses:
+        "202":
+          description: Durable acceptance, including identical replay
+          headers:
+            Location:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Generation"
+        default:
+          $ref: "#/components/responses/Error"
+    get:
+      operationId: listGenerations
+      parameters:
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 24
+        - in: query
+          name: cursor
+          description: Last owned generation UUID from the previous page; stable created_at/id ordering
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Owned non-deleted generation page
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [generations, next_cursor]
+                properties:
+                  generations:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Generation"
+                  next_cursor:
+                    type: string
+        default:
+          $ref: "#/components/responses/Error"
+  /v1/generations/{id}:
+    parameters:
+      - $ref: "#/components/parameters/ID"
+    get:
+      operationId: getGeneration
+      responses:
+        "200":
+          description: Current state and private artifacts; prompt and provider operation remain server-side
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Generation"
+        default:
+          $ref: "#/components/responses/Error"
+    delete:
+      operationId: deleteGeneration
+      description: Terminal jobs only; tombstone denies new downloads immediately. Physical GC runs separately.
+      responses:
+        "200":
+          description: Removed from library
+        default:
+          $ref: "#/components/responses/Error"
+  /v1/artifacts/{id}/download:
+    parameters:
+      - $ref: "#/components/parameters/ID"
+    get:
+      operationId: authorizeDownload
+      responses:
+        "200":
+          description: Two-minute relative content URL; content also requires owner authorization
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [url, expires_at, content_type]
+                properties:
+                  url:
+                    type: string
+                  expires_at:
+                    type: string
+                    description: Unix seconds encoded as a string
+                  content_type:
+                    type: string
+        default:
+          $ref: "#/components/responses/Error"
+  /v1/artifacts/{id}/content:
+    parameters:
+      - $ref: "#/components/parameters/ID"
+    get:
+      operationId: downloadContent
+      description: Owner-scoped, non-expired and non-deleted artifact. Signature alone does not grant access.
+      parameters:
+        - in: query
+          name: expires
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: signature
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Private image bytes, no-store, maximum 16 MiB
+          content:
+            image/png: {}
+            image/jpeg: {}
+            image/webp: {}
+        default:
+          $ref: "#/components/responses/Error"
 components:
+  securitySchemes:
+    OwnerBearer:
+      type: http
+      scheme: bearer
+  parameters:
+    ID:
+      in: path
+      name: id
+      required: true
+      schema:
+        type: string
+        format: uuid
+  requestBodies:
+    Credential:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/CredentialInput"
+  responses:
+    Error:
+      description: Sanitized error. 400 validation, 401 owner access, 404 missing/foreign resource, 409 conflict, 415 media type, 422 provider/auth/billing/policy, 429 quota, 500 internal failure. Request bodies limited to 16 KiB.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    Credential:
+      description: Redacted owned connection metadata
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Credential"
   schemas:
+    CredentialInput:
+      type: object
+      additionalProperties: false
+      required: [name, provider, api_key]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 120
+        provider:
+          enum: [horde, cloudflare, gemini]
+        api_key:
+          type: string
+          writeOnly: true
+          minLength: 10
+          maxLength: 4096
+        account_id:
+          type: string
+          description: Required 32-character hexadecimal account ID for Cloudflare
+        workers_free_confirmed:
+          type: boolean
+          description: Required true for Cloudflare; user asserts Workers Free without payment method. Does not verify an existing paid account's billing plan.
+    Credential:
+      type: object
+      required: [id, name, provider, status, revision, created_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        provider:
+          type: string
+        status:
+          enum: [active, revoked]
+        revision:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+    Model:
+      type: object
+      required: [id, provider_id, display_name, selectable, reason]
+      properties:
+        id:
+          type: string
+        provider_id:
+          type: string
+        display_name:
+          type: string
+        selectable:
+          type: boolean
+        reason:
+          type: string
+        capabilities:
+          type: array
+          items:
+            type: string
+    GenerationInput:
+      type: object
+      additionalProperties: false
+      required: [provider, model_id, prompt]
+      properties:
+        provider:
+          enum: [horde, cloudflare, comfyui, training]
+        model_id:
+          type: string
+        credential_id:
+          type: string
+          description: Required for Cloudflare; optional registered Horde key
+        prompt:
+          type: string
+          writeOnly: true
+          minLength: 1
+          maxLength: 2000
+          description: Horde maximum 1000 UTF-8 bytes; general maximum 2000 bytes
+        aspect_ratio:
+          enum: ["1:1", "16:9", "9:16"]
+          default: "1:1"
+          description: Cloudflare square only
+    Artifact:
+      type: object
+      required: [id, job_id, content_type, bytes, expires_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        job_id:
+          type: string
+          format: uuid
+        content_type:
+          enum: [image/png, image/jpeg, image/webp]
+        bytes:
+          type: integer
+        expires_at:
+          type: string
+          format: date-time
+    Generation:
+      type: object
+      required:
+        [
+          id,
+          state,
+          provider,
+          model_id,
+          aspect_ratio,
+          created_at,
+          updated_at,
+          artifacts,
+          route_reason,
+        ]
+      properties:
+        id:
+          type: string
+          format: uuid
+        state:
+          enum:
+            [
+              queued,
+              submitting,
+              running,
+              succeeded,
+              failed,
+              reconciliation_required,
+            ]
+        provider:
+          type: string
+        model_id:
+          type: string
+        aspect_ratio:
+          type: string
+        credential_id:
+          type: string
+        error_code:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        artifacts:
+          type: array
+          items:
+            $ref: "#/components/schemas/Artifact"
+        route_reason:
+          type: string
     Error:
       type: object
       required: [error]

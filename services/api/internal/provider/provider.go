@@ -14,11 +14,13 @@ const (
 )
 
 type Model struct {
-	ID           string
-	ProviderID   string
-	DisplayName  string
-	Capabilities []Capability
-	Region       string
+	ID           string       `json:"id"`
+	ProviderID   string       `json:"provider_id"`
+	DisplayName  string       `json:"display_name"`
+	Capabilities []Capability `json:"capabilities"`
+	Region       string       `json:"region,omitempty"`
+	Selectable   bool         `json:"selectable"`
+	Reason       string       `json:"reason"`
 }
 
 type Submission struct {
@@ -27,11 +29,14 @@ type Submission struct {
 	CredentialRef string
 	PromptRef     string // Resolve sensitive prompt inside activity, outside Temporal history.
 	Capability    Capability
+	Prompt        string `json:"-"` // Activity-local only; never a workflow argument/result.
+	AspectRatio   string
 }
 
 type Artifact struct {
 	ProviderReference string // Internal only; download through allowlisted provider transport.
 	MIMEType          string
+	Data              []byte `json:"-"` // Activity-local only; private storage precedes workflow completion.
 }
 
 type Operation struct {

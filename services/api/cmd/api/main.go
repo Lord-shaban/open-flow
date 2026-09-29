@@ -12,6 +12,8 @@ import (
 
 	"github.com/Lord-shaban/open-flow/services/api/internal/config"
 	"github.com/Lord-shaban/open-flow/services/api/internal/httpapi"
+	"github.com/Lord-shaban/open-flow/services/api/internal/persistence"
+	"github.com/Lord-shaban/open-flow/services/api/internal/studio"
 )
 
 func main() {
@@ -30,8 +32,23 @@ func main() {
 func run(c config.Config, logger *slog.Logger) error {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
+	handler := httpapi.New(logger)
+	if c.OwnerToken != "" {
+		initCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+		defer cancel()
+		store, err := persistence.Open(initCtx, c.DatabaseURL)
+		if err != nil {
+			return err
+		}
+		defer store.Pool.Close()
+		service, err := studio.FromConfig(initCtx, c, store)
+		if err != nil {
+			return err
+		}
+		handler = httpapi.NewStudio(logger, service)
+	}
 	server := &http.Server{
-		Addr: c.HTTPAddr, Handler: httpapi.New(logger),
+		Addr: c.HTTPAddr, Handler: handler,
 		ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 10 * time.Second,
 		WriteTimeout: 15 * time.Second, IdleTimeout: 60 * time.Second, MaxHeaderBytes: 1 << 20,
 	}

@@ -1,10 +1,10 @@
 # Architecture
 
-Status: target architecture with Kafka and Temporal required for system-design training. M0 and OF-005 implement the HTTP foundation, provider/event contracts, PostgreSQL schema, persisted learning workflow, dispatcher, transactional outbox relay and inbox-backed projection. Media generation is planned. See [durable pipeline](persistence.md) for implemented behavior and limits.
+Status: M1 implements the free image studio with Kafka and Temporal required for system-design training. Owner-scoped encrypted credentials/prompts, verified model discovery, durable image jobs, private S3 storage, signed downloads and the Next.js workspace are implemented. See [free providers](providers/free-providers.md), [API](api.md) and [durable pipeline](persistence.md) for behavior and limits. Video, multi-user authorization, usage billing and automatic routing are planned.
 
 ## Modules and responsibilities
 
-Next.js is the web client. A Go module supplies independent API, Temporal worker, dispatcher, outbox relay and example consumer processes. PostgreSQL is the application source of truth. Temporal owns durable orchestration. Kafka owns lifecycle event distribution and replay. S3/R2 will own private artifacts.
+Next.js supplies the web client and a same-origin proxy with a signed HttpOnly owner session. A Go module supplies independent API, Temporal worker, dispatcher, outbox relay and example consumer processes. PostgreSQL is the application source of truth. Temporal owns durable orchestration. Kafka owns lifecycle event distribution and replay. Private SeaweedFS S3 holds artifacts; no managed cloud account is required.
 
 ```mermaid
 flowchart LR
@@ -14,13 +14,13 @@ flowchart LR
   Dispatch --> Temporal[Temporal durable execution]
   Temporal --> Worker[Go activity workers]
   Worker --> Router[Capability and policy router]
-  Router --> Providers[Gemini / Vertex / adapters]
+  Router --> Providers[AI Horde / Workers AI / local adapters]
   Worker --> S3[(Private S3 / R2)]
   Worker --> PG
   PG --> Outbox[Transactional outbox relay]
   Outbox --> Kafka[Kafka lifecycle topics]
-  Kafka --> Usage[Usage consumer]
-  Kafka --> Analytics[Analytics / audit consumers]
+  Kafka --> Usage[Inbox-backed training projection]
+  Kafka -. planned .-> Analytics[Usage / analytics consumers]
   Usage --> PG
 ```
 
@@ -72,7 +72,7 @@ Transactional outbox bridges state changes and Kafka. Publish at least once; con
 
 ## Routing, security and scaling
 
-Filter owner-authorized credentials, verified image/video capabilities, region, configured allowlists and available health/quota signals before scoring. Default Gemini-first. Unknown cost/quota is explicit; route reasons and exclusions are persisted. Auth, billing, policy or project quota errors never cause key cycling. Only explicit authorized fallback after a known safe failure; ambiguous acceptance never fails over automatically.
+M1 requires explicit provider/model selection and verifies discovered IDs before acceptance. Default AI Horde anonymous access; Workers AI requires an encrypted, explicitly confirmed Workers Free connection. ComfyUI is optional local inference and Training canvas is procedural, not AI. Gemini generation is blocked. Unknown queue/quota availability is explicit; route reasons are returned with jobs. No automatic failover, paid fallback or credential cycling is implemented. Multi-provider scoring and health routing remain M3.
 
 Credentials require authenticated encryption with owner/provider AAD and versioned wrapping keys, plus authorization before ingestion. Objects are private and downloads short-lived. Restrict media fetch hosts, byte/MIME limits and telemetry cardinality.
 

@@ -13,3 +13,5 @@ bin/
 .DS_Store
 Thumbs.db
 artifacts/
+apps/web/test-results/
+apps/web/playwright-report/

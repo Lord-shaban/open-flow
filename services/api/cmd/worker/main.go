@@ -8,6 +8,7 @@ import (
 
 	"github.com/Lord-shaban/open-flow/services/api/internal/config"
 	"github.com/Lord-shaban/open-flow/services/api/internal/persistence"
+	"github.com/Lord-shaban/open-flow/services/api/internal/studio"
 	"github.com/Lord-shaban/open-flow/services/api/internal/workflows"
 	"go.temporal.io/sdk/activity"
 	"go.temporal.io/sdk/client"
@@ -45,6 +46,17 @@ func run() error {
 		activities := &workflows.ProbeActivities{Store: store}
 		w.RegisterWorkflowWithOptions(workflows.PersistedProbe, workflow.RegisterOptions{Name: workflows.PersistedProbeWorkflowName})
 		w.RegisterActivityWithOptions(activities.Complete, activity.RegisterOptions{Name: workflows.CompleteProbeActivityName})
+		if c.OwnerToken != "" {
+			service, err := studio.FromConfig(ctx, c, store)
+			if err != nil {
+				return err
+			}
+			media := &workflows.ImageActivities{Service: service}
+			w.RegisterWorkflowWithOptions(workflows.Image, workflow.RegisterOptions{Name: workflows.ImageWorkflowName})
+			w.RegisterActivityWithOptions(media.Submit, activity.RegisterOptions{Name: workflows.SubmitImageActivity})
+			w.RegisterActivityWithOptions(media.Poll, activity.RegisterOptions{Name: workflows.PollImageActivity})
+			w.RegisterActivityWithOptions(media.Reconcile, activity.RegisterOptions{Name: workflows.ReconcileImageActivity})
+		}
 	}
 	return w.Run(worker.InterruptCh())
 }
