@@ -1,0 +1,152 @@
+name: open-flow
+services:
+  postgres:
+    image: postgres:16.10
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-open_flow}
+      POSTGRES_USER: ${POSTGRES_USER:-open_flow}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-local-development-only}
+    ports: ["127.0.0.1:5432:5432"]
+    volumes: ["postgres_data:/var/lib/postgresql/data"]
+    healthcheck:
+      test: ["CMD-SHELL", 'pg_isready -U "$$POSTGRES_USER" -d "$$POSTGRES_DB"']
+      interval: 5s
+      timeout: 5s
+      retries: 20
+  temporal-postgres:
+    image: postgres:16.10
+    environment:
+      POSTGRES_USER: temporal
+      POSTGRES_PASSWORD: local-temporal-only
+    volumes: ["temporal_postgres_data:/var/lib/postgresql/data"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U temporal"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+  temporal:
+    image: temporalio/auto-setup:1.29.1
+    environment:
+      DB: postgres12
+      DB_PORT: 5432
+      POSTGRES_USER: temporal
+      POSTGRES_PWD: local-temporal-only
+      POSTGRES_SEEDS: temporal-postgres
+      ENABLE_ES: "false"
+      DYNAMIC_CONFIG_FILE_PATH: config/dynamicconfig/development-sql.yaml
+    volumes:
+      [
+        "./temporal/development-sql.yaml:/etc/temporal/config/dynamicconfig/development-sql.yaml:ro",
+      ]
+    depends_on:
+      temporal-postgres:
+        condition: service_healthy
+    ports: ["127.0.0.1:7233:7233"]
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "temporal",
+          "operator",
+          "cluster",
+          "health",
+          "--address",
+          "127.0.0.1:7233",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
+  temporal-ui:
+    image: temporalio/ui:2.54.1
+    environment:
+      TEMPORAL_ADDRESS: temporal:7233
+      TEMPORAL_CORS_ORIGINS: http://localhost:3000
+    depends_on:
+      temporal:
+        condition: service_healthy
+    ports: ["127.0.0.1:8088:8080"]
+  kafka:
+    image: apache/kafka:4.3.1
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: INTERNAL://:29092,EXTERNAL://:9092,CONTROLLER://:29093
+      KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka:29092,EXTERNAL://127.0.0.1:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT,CONTROLLER:PLAINTEXT
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:29093
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
+      KAFKA_LOG_DIRS: /tmp/kraft-combined-logs
+      CLUSTER_ID: MkU3OEVBNTcwNTJENDM2Qk
+    volumes: ["kafka_data:/tmp/kraft-combined-logs"]
+    ports: ["127.0.0.1:9092:9092"]
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "/opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:29092 --list",
+        ]
+      interval: 10s
+      timeout: 10s
+      retries: 30
+      start_period: 20s
+  kafka-init:
+    image: apache/kafka:4.3.1
+    depends_on:
+      kafka:
+        condition: service_healthy
+    entrypoint: ["/opt/kafka/bin/kafka-topics.sh"]
+    command:
+      [
+        "--bootstrap-server",
+        "kafka:29092",
+        "--create",
+        "--if-not-exists",
+        "--topic",
+        "open-flow.foundation.v1",
+        "--partitions",
+        "1",
+        "--replication-factor",
+        "1",
+      ]
+  redis:
+    image: redis:8.2.1
+    profiles: ["cache"]
+    ports: ["127.0.0.1:6379:6379"]
+    volumes: ["redis_data:/data"]
+    command: ["redis-server", "--appendonly", "yes"]
+  api:
+    profiles: ["app"]
+    build: ../services/api
+    environment:
+      OPEN_FLOW_HTTP_ADDR: 0.0.0.0:8080
+      OPEN_FLOW_TEMPORAL_ADDRESS: temporal:7233
+      OPEN_FLOW_KAFKA_BROKER: kafka:29092
+    ports: ["127.0.0.1:8080:8080"]
+  worker:
+    profiles: ["app"]
+    build: ../services/api
+    entrypoint: ["worker"]
+    environment:
+      OPEN_FLOW_TEMPORAL_ADDRESS: temporal:7233
+      OPEN_FLOW_KAFKA_BROKER: kafka:29092
+    depends_on:
+      temporal:
+        condition: service_healthy
+  web:
+    profiles: ["app"]
+    build:
+      context: ..
+      dockerfile: apps/web/Dockerfile
+    ports: ["127.0.0.1:3000:3000"]
+volumes:
+  postgres_data:
+  temporal_postgres_data:
+  kafka_data:
+  redis_data:

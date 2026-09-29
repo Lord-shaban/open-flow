@@ -28,10 +28,7 @@
       "id": "OF-001",
       "milestone": "M0 · Project foundation",
       "title": "Establish repository governance and contribution standards",
-      "labels": [
-        "documentation",
-        "infrastructure"
-      ],
+      "labels": ["documentation", "infrastructure"],
       "context": "A new contributor needs a trustworthy open-source repository before feature development.",
       "acceptance": [
         "Add MIT license, README, contributing guide, conduct policy, security disclosure, changelog, issue and PR templates.",
@@ -44,28 +41,20 @@
       "id": "OF-002",
       "milestone": "M0 · Project foundation",
       "title": "Document system architecture and initial ADRs",
-      "labels": [
-        "documentation",
-        "backend"
-      ],
+      "labels": ["documentation", "backend"],
       "context": "Keep provider integration, orchestration, persistence, and UI independently evolvable.",
       "acceptance": [
         "Document module boundaries and generation sequence/state diagrams.",
         "Record Temporal durable workflows, Kafka event contracts/outbox, provider contracts and credential security ADRs.",
         "Specify ambiguous submission recovery, tenant boundaries, retries, and failover restrictions."
       ],
-      "dependencies": [
-        "OF-001"
-      ]
+      "dependencies": ["OF-001"]
     },
     {
       "id": "OF-003",
       "milestone": "M0 · Project foundation",
       "title": "Bootstrap Go API and provider contract",
-      "labels": [
-        "backend",
-        "infrastructure"
-      ],
+      "labels": ["backend", "infrastructure"],
       "context": "Create a dependency-light runnable service with a versioned public surface.",
       "acceptance": [
         "Expose JSON liveness, readiness, and versioned metadata routes with graceful shutdown and request IDs.",
@@ -73,184 +62,130 @@
         "Add contract tests for methods, error envelopes, and startup configuration.",
         "Add a registered Temporal foundation workflow/worker, Kafka event envelope/publisher and smoke commands with deterministic unit tests."
       ],
-      "dependencies": [
-        "OF-002"
-      ]
+      "dependencies": ["OF-002"]
     },
     {
       "id": "OF-004",
       "milestone": "M0 · Project foundation",
       "title": "Bootstrap Next.js workspace and automated quality gates",
-      "labels": [
-        "frontend",
-        "infrastructure"
-      ],
+      "labels": ["frontend", "infrastructure"],
       "context": "Give contributors a runnable web entry point and reproducible checks.",
       "acceptance": [
         "Create App Router workspace, TypeScript, Tailwind, accessible responsive foundation page, and committed pnpm lockfile.",
         "Add Go formatting/vet/race tests, frontend lint/typecheck/build, documentation checks, and dependency review CI.",
         "Provide Go/web Dockerfiles and Compose PostgreSQL, Kafka KRaft, Temporal, UI and private object-storage development services."
       ],
-      "dependencies": [
-        "OF-003"
-      ]
+      "dependencies": ["OF-003"]
     },
     {
       "id": "OF-005",
       "milestone": "M1 · Gemini image MVP",
       "title": "Add PostgreSQL persistence, transactional outbox and workflow dispatch",
-      "labels": [
-        "backend",
-        "infrastructure"
-      ],
+      "labels": ["backend", "infrastructure"],
       "context": "Durably bridge database commits, Temporal workflow starts and Kafka events without lost jobs or untracked dual writes.",
       "acceptance": [
         "Introduce reviewed up/down migrations for owners, credentials, jobs, attempts, artifacts, usage, outbox and consumer inbox.",
         "Dispatch persisted jobs to Temporal using stable job-derived workflow IDs and conflict/reuse policy; retry dispatcher crashes safely.",
         "Relay outbox rows to Kafka with aggregate-key ordering and retry state; test duplicate publishes and idempotent consumer effects."
       ],
-      "dependencies": [
-        "OF-003"
-      ]
+      "dependencies": ["OF-003"]
     },
     {
       "id": "OF-006",
       "milestone": "M1 · Gemini image MVP",
       "title": "Implement single-owner access and encrypted BYOK credentials",
-      "labels": [
-        "backend",
-        "feature"
-      ],
+      "labels": ["backend", "feature"],
       "context": "API keys need explicit ownership and server-side protection before provider calls.",
       "acceptance": [
         "Require a configured owner access token before exposing credential or generation routes; default to loopback.",
         "Encrypt credentials with authenticated encryption, owner/provider AAD, key versioning, and redacted reads.",
         "Test cross-owner denial, revoke/rotate, wrong encryption key, log redaction, and body-size limits."
       ],
-      "dependencies": [
-        "OF-005"
-      ]
+      "dependencies": ["OF-005"]
     },
     {
       "id": "OF-007",
       "milestone": "M1 · Gemini image MVP",
       "title": "Implement Gemini adapter and verified model discovery",
-      "labels": [
-        "provider",
-        "backend"
-      ],
+      "labels": ["provider", "backend"],
       "context": "Gemini is the default provider; availability and media capabilities must be verified.",
       "acceptance": [
         "Use current official Google Gen AI Go SDK with Developer API credentials and bounded HTTP timeouts.",
         "Normalize discovery using verified image/video metadata; do not equate generateContent support with image generation.",
         "Add connection tests with structured auth/quota errors, pagination/cache handling, and fixture-based SDK contract tests."
       ],
-      "dependencies": [
-        "OF-006"
-      ]
+      "dependencies": ["OF-006"]
     },
     {
       "id": "OF-008",
       "milestone": "M1 · Gemini image MVP",
       "title": "Implement asynchronous Gemini image generation API",
-      "labels": [
-        "feature",
-        "backend"
-      ],
+      "labels": ["feature", "backend"],
       "context": "Users need a durable unified API before adding a complex UI.",
       "acceptance": [
         "Implement POST /v1/generations, GET /v1/generations/{id}, and paginated list per OpenAPI design.",
         "Return 202 and honor owner-scoped Idempotency-Key; conflicting payload returns 409.",
         "Start a durable Temporal workflow per generation; persist operation/attempt state and reconcile ambiguous submissions; test using fake activities."
       ],
-      "dependencies": [
-        "OF-005",
-        "OF-007"
-      ]
+      "dependencies": ["OF-005", "OF-007"]
     },
     {
       "id": "OF-009",
       "milestone": "M1 · Gemini image MVP",
       "title": "Persist generated media in private S3-compatible storage",
-      "labels": [
-        "infrastructure",
-        "backend"
-      ],
+      "labels": ["infrastructure", "backend"],
       "context": "Provider URLs can expire; artifacts need private, durable ownership.",
       "acceptance": [
         "Implement streaming uploads, content-type/size checks, configurable S3/R2 endpoint and private bucket.",
         "Return short-lived authorized download URLs; reject arbitrary remote URLs and path traversal.",
         "Test upload retries, orphan cleanup, signed-link expiry, and deletion/retention behavior."
       ],
-      "dependencies": [
-        "OF-008"
-      ]
+      "dependencies": ["OF-008"]
     },
     {
       "id": "OF-010",
       "milestone": "M1 · Gemini image MVP",
       "title": "Build provider onboarding and image playground",
-      "labels": [
-        "frontend",
-        "feature"
-      ],
+      "labels": ["frontend", "feature"],
       "context": "Make Gemini connection and generation understandable without exposing credentials.",
       "acceptance": [
         "Add shadcn/ui primitives, secure provider forms, explicit connection results, and official credential instructions.",
         "Drive model selection from backend capabilities and show route reason, queued/running/failed/completed states.",
         "Verify keyboard use, mobile layout, refresh recovery, failed jobs, and real image download using a fake adapter."
       ],
-      "dependencies": [
-        "OF-006",
-        "OF-008",
-        "OF-009"
-      ]
+      "dependencies": ["OF-006", "OF-008", "OF-009"]
     },
     {
       "id": "OF-011",
       "milestone": "M2 · Video and resilience",
       "title": "Implement restart-safe Veo video operations",
-      "labels": [
-        "provider",
-        "backend"
-      ],
+      "labels": ["provider", "backend"],
       "context": "Video operations outlive an API request and must resume without resubmitting.",
       "acceptance": [
         "Submit through verified SDK APIs and persist provider operation ID before scheduling subsequent polls.",
         "Use deterministic Temporal timers and provider polling activities; prove replay and recovery after worker restart.",
         "Distinguish local cancellation from provider cancellation support; test timeout, safety block, missing assets, and expiry."
       ],
-      "dependencies": [
-        "OF-008",
-        "OF-009"
-      ]
+      "dependencies": ["OF-008", "OF-009"]
     },
     {
       "id": "OF-012",
       "milestone": "M2 · Video and resilience",
       "title": "Add failure classification, retry budgets, and cancellation",
-      "labels": [
-        "backend",
-        "feature"
-      ],
+      "labels": ["backend", "feature"],
       "context": "Provider errors need predictable behavior without duplicate billing.",
       "acceptance": [
         "Normalize auth, billing, quota, throttling, transient, policy, and ambiguous outcomes.",
         "Honor Retry-After with jitter and bounded retry/poll budgets; never retry policy blocks or ambiguous submissions automatically.",
         "Test cancellation signals, activity retries, workflow replay/versioning and consumer deduplication without automatic quota evasion."
       ],
-      "dependencies": [
-        "OF-011"
-      ]
+      "dependencies": ["OF-011"]
     },
     {
       "id": "OF-013",
       "milestone": "M2 · Video and resilience",
       "title": "Build generation history, job details, and usage ledger",
-      "labels": [
-        "frontend",
-        "backend"
-      ],
+      "labels": ["frontend", "backend"],
       "context": "Users should understand progress, errors, and cost uncertainty.",
       "acceptance": [
         "Add paginated history, job attempts/timeline, video playback, and downloadable owned assets.",
@@ -258,141 +193,98 @@
         "Verify refresh/reconnect, empty states, owner-scoped queries, and no credential/prompt leakage in telemetry.",
         "Build an idempotent Kafka usage consumer with explicit offsets/inbox semantics and dead-letter handling."
       ],
-      "dependencies": [
-        "OF-010",
-        "OF-012"
-      ]
+      "dependencies": ["OF-010", "OF-012"]
     },
     {
       "id": "OF-014",
       "milestone": "M3 · Multi-provider routing",
       "title": "Add Vertex AI adapter with ADC and workload identity",
-      "labels": [
-        "provider",
-        "backend"
-      ],
+      "labels": ["provider", "backend"],
       "context": "Support Google Cloud users while keeping authentication and regional availability separate.",
       "acceptance": [
         "Implement a distinct Vertex adapter through Google Gen AI SDK, project/location configuration and ADC.",
         "Document local gcloud setup and deployment workload identity; do not ask users to paste service-account JSON.",
         "Verify IAM denial, missing project, region-specific models, and existing common adapter contract."
       ],
-      "dependencies": [
-        "OF-007",
-        "OF-012"
-      ]
+      "dependencies": ["OF-007", "OF-012"]
     },
     {
       "id": "OF-015",
       "milestone": "M3 · Multi-provider routing",
       "title": "Implement explainable routing policies and health signals",
-      "labels": [
-        "backend",
-        "feature"
-      ],
+      "labels": ["backend", "feature"],
       "context": "Routing should use actual eligible providers and make each decision visible.",
       "acceptance": [
         "Implement gemini-first, fastest, cheapest, balanced and availability strategies over capability/owner allowlists.",
         "Represent unknown cost/quota explicitly; add health freshness, circuit-breaker state, and deterministic tie-breaking.",
         "Persist candidate exclusions and reasons; test all-ineligible, explicit preference, stale health, and controlled failover."
       ],
-      "dependencies": [
-        "OF-012",
-        "OF-014"
-      ]
+      "dependencies": ["OF-012", "OF-014"]
     },
     {
       "id": "OF-016",
       "milestone": "M3 · Multi-provider routing",
       "title": "Add a community provider adapter and conformance harness",
-      "labels": [
-        "provider",
-        "help wanted"
-      ],
+      "labels": ["provider", "help wanted"],
       "context": "Prove extensibility using fal or Replicate selected through current official documentation.",
       "acceptance": [
         "Create an adapter using only the public common interface without branching core logic on provider names.",
         "Publish conformance fixtures for discovery, errors, operation resume, polling, and cancellation support.",
         "Document credentials, billing, capabilities, and provider limits; use opt-in paid integration tests."
       ],
-      "dependencies": [
-        "OF-015"
-      ]
+      "dependencies": ["OF-015"]
     },
     {
       "id": "OF-017",
       "milestone": "M4 · Production hardening",
       "title": "Instrument metrics, traces, and operational dashboards",
-      "labels": [
-        "infrastructure",
-        "backend"
-      ],
+      "labels": ["infrastructure", "backend"],
       "context": "Operations need latency, failures, queue age, and provider health without user-data leakage.",
       "acceptance": [
         "Add OpenTelemetry API/worker traces and Prometheus metrics with bounded cardinality.",
         "Provide Grafana dashboards for Temporal task queues/workflow latency, Kafka consumer lag/outbox age, provider retries and storage errors.",
         "Test attribute redaction, health checks, correlation across polling attempts, and alert/runbook links."
       ],
-      "dependencies": [
-        "OF-013",
-        "OF-015"
-      ]
+      "dependencies": ["OF-013", "OF-015"]
     },
     {
       "id": "OF-018",
       "milestone": "M4 · Production hardening",
       "title": "Harden multi-user authorization and security boundaries",
-      "labels": [
-        "backend",
-        "feature"
-      ],
+      "labels": ["backend", "feature"],
       "context": "A local owner deployment needs audited tenancy before public hosting.",
       "acceptance": [
         "Add session authentication, per-owner/tenant authorization, CSRF protections where cookies are used, and scoped API tokens.",
         "Add credential KMS rotation, SSRF restrictions, encrypted backups, retention controls, and abuse limits.",
         "Run threat-model review and adversarial cross-tenant tests for all read/write/download endpoints."
       ],
-      "dependencies": [
-        "OF-006",
-        "OF-017"
-      ]
+      "dependencies": ["OF-006", "OF-017"]
     },
     {
       "id": "OF-019",
       "milestone": "M4 · Production hardening",
       "title": "Add production deployment, recovery, and load verification",
-      "labels": [
-        "infrastructure",
-        "documentation"
-      ],
+      "labels": ["infrastructure", "documentation"],
       "context": "A deployment guide must establish capacity and recovery evidence.",
       "acceptance": [
         "Publish hardened container Compose deployment, reverse proxy/TLS, migration and secret injection procedures.",
         "Load-test Kafka consumer lag/rebalances, outbox relay crashes, Temporal worker termination and provider outages; document scaling thresholds.",
         "Verify backups, replay compatibility, rolling worker deployments and rollback; add Kubernetes only if deployment exercises require it."
       ],
-      "dependencies": [
-        "OF-017",
-        "OF-018"
-      ]
+      "dependencies": ["OF-017", "OF-018"]
     },
     {
       "id": "OF-020",
       "milestone": "M4 · Production hardening",
       "title": "Publish versioned API reference and first release process",
-      "labels": [
-        "documentation",
-        "good first issue"
-      ],
+      "labels": ["documentation", "good first issue"],
       "context": "Developers need stable contracts and clear version/release policy.",
       "acceptance": [
         "Validate OpenAPI against implemented endpoints and provide curl examples plus provider contributor tutorial.",
         "Add semantic-version release checklist, changelog, license/dependency review, and reproducible build provenance.",
         "Document compatibility guarantees, deprecation policy, and SDK generation as a later milestone."
       ],
-      "dependencies": [
-        "OF-019"
-      ]
+      "dependencies": ["OF-019"]
     }
   ],
   "labels": [

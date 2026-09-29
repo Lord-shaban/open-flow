@@ -1,0 +1,71 @@
+name: CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+permissions:
+  contents: read
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: services/api
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: services/api/go.mod
+          cache-dependency-path: services/api/go.sum
+      - run: test -z "$(gofmt -l .)"
+      - run: go vet ./...
+      - run: go test -race ./...
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm check
+      - run: pnpm build
+  containers:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker compose -f infra/compose.yaml config --quiet
+      - run: docker build -t open-flow-api services/api
+      - run: docker build -t open-flow-web -f apps/web/Dockerfile .
+  infrastructure-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: services/api/go.mod
+          cache-dependency-path: services/api/go.sum
+      - run: docker compose -f infra/compose.yaml up -d --wait postgres temporal-postgres temporal temporal-ui kafka
+      - run: docker compose -f infra/compose.yaml run --rm kafka-init
+      - name: Run Kafka and Temporal probes
+        working-directory: services/api
+        run: |
+          go build -o /tmp/open-flow-worker ./cmd/worker
+          /tmp/open-flow-worker > /tmp/open-flow-worker.log 2>&1 &
+          worker_pid=$!
+          trap 'kill "$worker_pid" || true' EXIT
+          go run ./cmd/temporal-smoke
+          go run ./cmd/kafka-smoke
+      - name: Collect infrastructure logs
+        if: always()
+        run: |
+          docker compose -f infra/compose.yaml logs --no-color
+          if [ -f /tmp/open-flow-worker.log ]; then cat /tmp/open-flow-worker.log; fi
+      - if: always()
+        run: docker compose -f infra/compose.yaml down

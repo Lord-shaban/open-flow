@@ -46,14 +46,14 @@ The diagram describes the target system. M0 implements the web entry point, HTTP
 
 ## Repository
 
-| Path | Purpose |
-| --- | --- |
-| `apps/web` | Next.js App Router, TypeScript and Tailwind |
-| `services/api` | Go HTTP service and provider contracts |
-| `api` | Versioned OpenAPI contract |
-| `docs` | Architecture, ADRs, providers, deployment and backlog |
-| `infra` | Docker development configuration |
-| `scripts` | Repository quality and GitHub planning helpers |
+| Path           | Purpose                                               |
+| -------------- | ----------------------------------------------------- |
+| `apps/web`     | Next.js App Router, TypeScript and Tailwind           |
+| `services/api` | Go HTTP service and provider contracts                |
+| `api`          | Versioned OpenAPI contract                            |
+| `docs`         | Architecture, ADRs, providers, deployment and backlog |
+| `infra`        | Docker development configuration                      |
+| `scripts`      | Repository quality and GitHub planning helpers        |
 
 ## Roadmap and contributions
 

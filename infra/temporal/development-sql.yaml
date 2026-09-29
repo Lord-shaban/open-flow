@@ -1,0 +1,4 @@
+# Development only; production requires reviewed visibility and namespace settings.
+system.forceSearchAttributesCacheRefreshOnRead:
+  - value: true
+    constraints: {}
