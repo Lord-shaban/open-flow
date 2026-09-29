@@ -2,7 +2,7 @@
 
 **A Gemini-first, open-source AI media gateway.** Bring your own provider credentials, generate images and videos, and understand how each request is routed.
 
-> Early foundation (M0). The runnable Go API and Next.js workspace are available. Credential management, provider calls, image/video generation and smart routing are tracked work; they are not implemented yet.
+> Foundation with the first M1 infrastructure slice. The Go API, Next.js workspace and durable PostgreSQL → Temporal → Kafka learning pipeline are available. Credential management, provider calls, image/video generation and smart routing are tracked work; they are not implemented yet.
 
 ## Why Open Flow?
 
@@ -42,7 +42,7 @@ flowchart LR
   Storage --> API
 ```
 
-The diagram describes the target system. M0 implements the web entry point, HTTP foundation, provider/event interfaces, a Temporal probe workflow and Kafka/Temporal smoke commands. Keep core modules cohesive while practicing Temporal orchestration and Kafka event delivery from day one.
+The diagram describes the target system. Implemented slices include the web entry point, HTTP foundation, provider/event interfaces, PostgreSQL migrations, a persisted Temporal probe, workflow dispatcher, Kafka outbox relay and inbox-backed training projection. See [durable pipeline](docs/persistence.md) for operation and crash-recovery exercises. Provider generation, storage and billing consumers remain planned.
 
 ## Repository
 

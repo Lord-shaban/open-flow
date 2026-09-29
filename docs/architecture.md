@@ -1,10 +1,10 @@
 # Architecture
 
-Status: target architecture with Kafka and Temporal required for system-design training. M0 implements HTTP foundation, provider/event contracts, a Temporal probe workflow and Kafka/Temporal smoke commands; media generation is planned.
+Status: target architecture with Kafka and Temporal required for system-design training. M0 and OF-005 implement the HTTP foundation, provider/event contracts, PostgreSQL schema, persisted learning workflow, dispatcher, transactional outbox relay and inbox-backed projection. Media generation is planned. See [durable pipeline](persistence.md) for implemented behavior and limits.
 
 ## Modules and responsibilities
 
-Next.js is the web client. A Go module supplies independent API, Temporal worker and later outbox/consumer processes. PostgreSQL is the application source of truth. Temporal owns durable orchestration. Kafka owns lifecycle event distribution and replay. S3/R2 owns private artifacts.
+Next.js is the web client. A Go module supplies independent API, Temporal worker, dispatcher, outbox relay and example consumer processes. PostgreSQL is the application source of truth. Temporal owns durable orchestration. Kafka owns lifecycle event distribution and replay. S3/R2 will own private artifacts.
 
 ```mermaid
 flowchart LR

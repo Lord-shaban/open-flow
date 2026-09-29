@@ -60,3 +60,7 @@ go run ./cmd/kafka-smoke
 ```
 
 Temporal UI: http://localhost:8088. Kafka's host listener is 127.0.0.1:9092; containers use kafka:29092. The foundation topic has one partition. These probes make no provider calls. See [system-design labs](system-design-labs.md).
+
+## Persisted pipeline
+
+OF-005 adds explicit migrations, a persisted Temporal workflow, a dispatcher, outbox relay and inbox-backed projection. Follow [durable pipeline setup](persistence.md) to set `OPEN_FLOW_DATABASE_URL`, initialize `open-flow.jobs.v1`, run migrations, then start the worker and crash-recovery smoke probe. The jobs topic has three fixed partitions. The app profile runs these processes continuously. `OPEN_FLOW_TEST_DATABASE_URL` enables isolated-schema PostgreSQL integration tests locally; CI runs them with race detection.

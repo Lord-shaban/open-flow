@@ -14,6 +14,7 @@ type Config struct {
 	TemporalNamespace string
 	TemporalTaskQueue string
 	KafkaBroker       string
+	DatabaseURL       string
 }
 
 func Load() (Config, error) {
@@ -23,6 +24,7 @@ func Load() (Config, error) {
 		TemporalNamespace: env("OPEN_FLOW_TEMPORAL_NAMESPACE", "default"),
 		TemporalTaskQueue: env("OPEN_FLOW_TEMPORAL_TASK_QUEUE", "open-flow-media"),
 		KafkaBroker:       env("OPEN_FLOW_KAFKA_BROKER", "127.0.0.1:9092"),
+		DatabaseURL:       os.Getenv("OPEN_FLOW_DATABASE_URL"),
 	}
 	for name, address := range map[string]string{"HTTP": c.HTTPAddr, "Temporal": c.TemporalAddress, "Kafka": c.KafkaBroker} {
 		if _, _, err := net.SplitHostPort(address); err != nil {
