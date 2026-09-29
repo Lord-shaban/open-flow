@@ -133,7 +133,7 @@ func (s *Store) CreateGeneration(ctx context.Context, n NewGeneration) (string, 
 			return "", false, err
 		}
 	}
-	tag, err := tx.Exec(ctx, `INSERT INTO jobs(id,owner_id,kind,workflow_id,credential_id,idempotency_key,request_hash,payload_ref,provider,model_id,aspect_ratio) VALUES ($1,$2,'image',$3,NULLIF($4,'')::uuid,$5,$6,$1::text,$7,$8,$9) ON CONFLICT (owner_id,idempotency_key) DO NOTHING`, n.ID, n.Owner, WorkflowID(n.ID), n.Credential, n.Idempotency, n.Hash, n.Provider, n.Model, n.Aspect)
+	tag, err := tx.Exec(ctx, `INSERT INTO jobs(id,owner_id,kind,workflow_id,credential_id,idempotency_key,request_hash,payload_ref,provider,model_id,aspect_ratio) VALUES ($1,$2,'image',$3,NULLIF($4,'')::uuid,$5,$6,$1::uuid::text,$7,$8,$9) ON CONFLICT (owner_id,idempotency_key) DO NOTHING`, n.ID, n.Owner, WorkflowID(n.ID), n.Credential, n.Idempotency, n.Hash, n.Provider, n.Model, n.Aspect)
 	if err != nil {
 		return "", false, err
 	}
