@@ -18,3 +18,5 @@ Submission activities must not inherit automatic retries blindly: providers may 
 ## Consequences
 
 The local stack is intentionally larger for learning. M0 ships a safe Temporal probe workflow, Kafka envelope/publisher and smoke commands. Generation dispatch, outbox/inbox persistence and consumers ship incrementally in M1/M2. Study replay, rebalances, duplicate events, dead letters and worker crashes through documented labs. Redis remains optional caching; Kubernetes remains a later deployment exercise.
+
+OF-005 implements the first durable pipeline using a persisted non-provider probe, bounded row-lock dispatch/relay and a transactional inbox projection. The [pipeline guide](../persistence.md) records lock-duration tradeoffs, workflow-retention limits, ordering and fault-injection evidence. Real provider workflows and usage billing remain later slices.

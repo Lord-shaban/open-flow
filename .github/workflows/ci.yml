@@ -11,6 +11,19 @@ concurrency:
 jobs:
   backend:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16.10
+        env:
+          POSTGRES_DB: open_flow_test
+          POSTGRES_USER: open_flow
+          POSTGRES_PASSWORD: ci-test-only
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U open_flow -d open_flow_test"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+    env:
+      OPEN_FLOW_TEST_DATABASE_URL: postgres://open_flow:ci-test-only@127.0.0.1:5432/open_flow_test?sslmode=disable
     defaults:
       run:
         working-directory: services/api
@@ -45,6 +58,8 @@ jobs:
   infrastructure-smoke:
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    env:
+      OPEN_FLOW_DATABASE_URL: postgres://open_flow:local-development-only@127.0.0.1:5432/open_flow?sslmode=disable
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
@@ -53,15 +68,18 @@ jobs:
           cache-dependency-path: services/api/go.sum
       - run: docker compose -f infra/compose.yaml up -d --wait postgres temporal-postgres temporal temporal-ui kafka
       - run: docker compose -f infra/compose.yaml run --rm kafka-init
+      - run: docker compose -f infra/compose.yaml run --rm kafka-jobs-init
       - name: Run Kafka and Temporal probes
         working-directory: services/api
         run: |
+          go run ./cmd/migrate up
           go build -o /tmp/open-flow-worker ./cmd/worker
           /tmp/open-flow-worker > /tmp/open-flow-worker.log 2>&1 &
           worker_pid=$!
           trap 'kill "$worker_pid" || true' EXIT
           go run ./cmd/temporal-smoke
           go run ./cmd/kafka-smoke
+          go run ./cmd/pipeline-smoke
       - name: Collect infrastructure logs
         if: always()
         run: |

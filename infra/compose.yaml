@@ -122,6 +122,35 @@ services:
     ports: ["127.0.0.1:6379:6379"]
     volumes: ["redis_data:/data"]
     command: ["redis-server", "--appendonly", "yes"]
+  kafka-jobs-init:
+    image: apache/kafka:4.3.1
+    depends_on:
+      kafka:
+        condition: service_healthy
+    entrypoint: ["/opt/kafka/bin/kafka-topics.sh"]
+    command:
+      [
+        "--bootstrap-server",
+        "kafka:29092",
+        "--create",
+        "--if-not-exists",
+        "--topic",
+        "open-flow.jobs.v1",
+        "--partitions",
+        "3",
+        "--replication-factor",
+        "1",
+      ]
+  migrate:
+    profiles: ["app"]
+    build: ../services/api
+    entrypoint: ["migrate"]
+    command: ["up"]
+    environment:
+      OPEN_FLOW_DATABASE_URL: postgres://${POSTGRES_USER:-open_flow}:${POSTGRES_PASSWORD:-local-development-only}@postgres:5432/${POSTGRES_DB:-open_flow}?sslmode=disable
+    depends_on:
+      postgres:
+        condition: service_healthy
   api:
     profiles: ["app"]
     build: ../services/api
@@ -137,9 +166,51 @@ services:
     environment:
       OPEN_FLOW_TEMPORAL_ADDRESS: temporal:7233
       OPEN_FLOW_KAFKA_BROKER: kafka:29092
+      OPEN_FLOW_DATABASE_URL: postgres://${POSTGRES_USER:-open_flow}:${POSTGRES_PASSWORD:-local-development-only}@postgres:5432/${POSTGRES_DB:-open_flow}?sslmode=disable
     depends_on:
       temporal:
         condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+  dispatcher:
+    profiles: ["app"]
+    build: ../services/api
+    entrypoint: ["pipeline"]
+    command: ["dispatch"]
+    environment:
+      OPEN_FLOW_DATABASE_URL: postgres://${POSTGRES_USER:-open_flow}:${POSTGRES_PASSWORD:-local-development-only}@postgres:5432/${POSTGRES_DB:-open_flow}?sslmode=disable
+      OPEN_FLOW_TEMPORAL_ADDRESS: temporal:7233
+    depends_on:
+      temporal:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+  outbox-relay:
+    profiles: ["app"]
+    build: ../services/api
+    entrypoint: ["pipeline"]
+    command: ["relay"]
+    environment:
+      OPEN_FLOW_DATABASE_URL: postgres://${POSTGRES_USER:-open_flow}:${POSTGRES_PASSWORD:-local-development-only}@postgres:5432/${POSTGRES_DB:-open_flow}?sslmode=disable
+      OPEN_FLOW_KAFKA_BROKER: kafka:29092
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      kafka-jobs-init:
+        condition: service_completed_successfully
+  job-consumer:
+    profiles: ["app"]
+    build: ../services/api
+    entrypoint: ["pipeline"]
+    command: ["consume"]
+    environment:
+      OPEN_FLOW_DATABASE_URL: postgres://${POSTGRES_USER:-open_flow}:${POSTGRES_PASSWORD:-local-development-only}@postgres:5432/${POSTGRES_DB:-open_flow}?sslmode=disable
+      OPEN_FLOW_KAFKA_BROKER: kafka:29092
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      kafka-jobs-init:
+        condition: service_completed_successfully
   web:
     profiles: ["app"]
     build:

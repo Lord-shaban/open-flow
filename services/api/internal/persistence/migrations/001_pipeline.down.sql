@@ -1,0 +1,9 @@
+DROP TABLE job_event_projections;
+DROP TABLE consumer_inbox;
+DROP TABLE outbox;
+DROP TABLE usage;
+DROP TABLE artifacts;
+DROP TABLE attempts;
+DROP TABLE jobs;
+DROP TABLE credentials;
+DROP TABLE owners;

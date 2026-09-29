@@ -8,6 +8,8 @@ Start Compose infrastructure, then run the worker in one terminal and `go run ./
 
 ## Exercises as implementation ships
 
+OF-005 now includes a runnable persisted-pipeline lab: [setup and recovery](persistence.md). Run `go run ./cmd/pipeline-smoke` with the database-enabled worker. It exercises lost DB acknowledgement after a Temporal start and lost outbox acknowledgement after a Kafka publish, then verifies stable workflow identity, duplicate delivery and one durable consumer effect per event. PostgreSQL tests also prove relay concurrency, delayed predecessor ordering and stale event handling. Provider-specific exercises below remain planned.
+
 | Exercise                                                       | Expected invariant                                         | Milestone |
 | -------------------------------------------------------------- | ---------------------------------------------------------- | --------- |
 | Kill/restart a Temporal worker during a poll timer             | Resume saved operation; no second submission               | M1/M2     |
