@@ -1,0 +1,81 @@
+openapi: 3.1.0
+info:
+  title: Open Flow API
+  version: 0.1.0-dev
+  description: Foundation endpoints only. Media generation is planned.
+servers:
+  - url: http://127.0.0.1:8080
+paths:
+  /healthz:
+    get:
+      operationId: liveness
+      summary: HTTP process liveness
+      responses:
+        "200":
+          description: Process is alive
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status]
+                properties:
+                  status:
+                    const: ok
+  /readyz:
+    get:
+      operationId: readiness
+      summary: HTTP foundation readiness; infrastructure probes are not configured
+      responses:
+        "200":
+          description: HTTP foundation ready
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status, scope, dependency_checks]
+                properties:
+                  status:
+                    const: ready
+                  scope:
+                    const: http-foundation
+                  dependency_checks:
+                    const: not_configured
+  /v1:
+    get:
+      operationId: metadata
+      summary: Service metadata and implemented capabilities
+      responses:
+        "200":
+          description: Service metadata
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [service, version, stage, capabilities]
+                properties:
+                  service:
+                    const: open-flow
+                  version:
+                    type: string
+                  stage:
+                    const: foundation
+                  capabilities:
+                    type: array
+                    items:
+                      type: string
+components:
+  schemas:
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message, request_id]
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+            request_id:
+              type: string
