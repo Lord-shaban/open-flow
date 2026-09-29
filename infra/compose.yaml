@@ -33,6 +33,7 @@ services:
       POSTGRES_PWD: local-temporal-only
       POSTGRES_SEEDS: temporal-postgres
       ENABLE_ES: "false"
+      BIND_ON_IP: 0.0.0.0
       DYNAMIC_CONFIG_FILE_PATH: config/dynamicconfig/development-sql.yaml
     volumes:
       [
