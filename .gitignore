@@ -1,0 +1,15 @@
+node_modules/
+.next/
+out/
+coverage/
+.pnpm-store/
+.env
+.env.*
+!.env.example
+*.tsbuildinfo
+*.log
+bin/
+*.exe
+.DS_Store
+Thumbs.db
+artifacts/

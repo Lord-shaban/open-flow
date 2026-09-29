@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Private security reporting
+    url: https://github.com/Lord-shaban/open-flow/security/advisories/new
+    about: Report security vulnerabilities privately; never post keys.
