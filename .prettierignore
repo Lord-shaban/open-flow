@@ -1,0 +1,6 @@
+.next
+node_modules
+pnpm-lock.yaml
+services/api/go.sum
+services/api/**/*.go
+apps/web/next-env.d.ts

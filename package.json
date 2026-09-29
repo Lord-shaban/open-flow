@@ -1,0 +1,24 @@
+{
+  "name": "open-flow",
+  "version": "0.1.0",
+  "private": true,
+  "license": "MIT",
+  "packageManager": "pnpm@11.25.0",
+  "engines": {
+    "node": ">=24.0.0"
+  },
+  "scripts": {
+    "dev": "pnpm --filter @open-flow/web dev",
+    "build": "pnpm --filter @open-flow/web build",
+    "lint": "pnpm --filter @open-flow/web lint",
+    "typecheck": "pnpm --filter @open-flow/web typecheck",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "docs:check": "node scripts/check-repository.mjs",
+    "check": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm docs:check"
+  },
+  "devDependencies": {
+    "prettier": "3.9.9",
+    "yaml": "2.9.1"
+  }
+}
