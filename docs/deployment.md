@@ -1,9 +1,9 @@
 # Deployment
 
-Status: M0 containers are development foundations; production media deployment is gated by M4.
+Status: M1 containers implement the local free image studio. Public production deployment remains gated by M4.
 
-The API Dockerfile produces a non-root minimal image. The web Dockerfile builds Next.js standalone output. `infra/compose.yaml` offers loopback-bound development services and optional application containers. A Temporal foundation worker exists; real generation workflows and Kafka consumers remain tracked milestones. Kafka/Temporal use development configuration with loopback host ports. Private object storage is introduced in OF-009.
+The API Dockerfile produces a non-root minimal image with API, worker, migration, pipeline and storage cleanup binaries. The web Dockerfile builds Next.js standalone output. `infra/compose.yaml` offers loopback-bound PostgreSQL, Kafka, Temporal and authenticated private SeaweedFS S3. The app profile runs real image workflows, dispatch, outbox relay and projection consumer. Generate local secrets with `pnpm setup:local`; see [development](development.md) and [free-provider requirements](providers/free-providers.md).
 
-Before public hosting, complete owner/session authorization, encrypted credentials and key backup, private object storage, migration/rollback, TLS/reverse proxy, least-privilege database access, egress limits, metrics and recovery drills. Production secrets must come from the platform secret store, not baked image layers or committed env files. Pin image digests during release and scan dependencies.
+M1 includes single-owner authorization, encrypted credentials/prompts, private object storage and checksummed migrations. Before public hosting, complete multi-user authorization, TLS/reverse proxy with secure cookies, least-privilege database/storage accounts, egress limits, metrics and recovery drills. Back up versioned encryption keys alongside the database and objects. Production secrets must come from a secret store, not baked image layers or committed env files. Pin image digests during release and scan dependencies. No hosted paid deployment has been provisioned.
 
-Scale API/worker separately after the persistent job queue exists. Kafka and Temporal are required learning infrastructure. Add Redis caching or Kubernetes only with a clear exercise and reviewed ADR. OF-019 will deliver verified production procedures.
+API and workers can run independently around the persistent dispatch queue. Kafka and Temporal are required learning infrastructure; the supplied single-node stack has no HA guarantee. Add Redis caching or Kubernetes only with a clear exercise and reviewed ADR. OF-019 will deliver verified production procedures.

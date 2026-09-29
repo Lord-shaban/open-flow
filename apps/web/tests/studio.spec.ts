@@ -5,6 +5,11 @@ test("owner unlock, encrypted connections and durable private creation", async (
   page,
 }, testInfo) => {
   const errors: string[] = [];
+  const foreignOrigin = await page.request.post("/api/session", {
+    headers: { Origin: "https://unrelated.invalid" },
+    data: { token: process.env.OPEN_FLOW_OWNER_TOKEN },
+  });
+  expect(foreignOrigin.status()).toBe(403);
   page.on("pageerror", (error) => errors.push(error.message));
   await page.goto("/");
   await expect(

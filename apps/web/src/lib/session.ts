@@ -45,7 +45,21 @@ export async function logout() {
   (await cookies()).delete(cookieName);
 }
 export function sameOrigin(request: Request) {
-  return request.headers.get("origin") === new URL(request.url).origin;
+  // Next may normalize the URL hostname to localhost. Host still describes
+  // the browser's target authority, including its port; ignore forwarded hosts.
+  const origin = request.headers.get("origin"),
+    host = request.headers.get("host");
+  if (!origin || !host) return false;
+  try {
+    const parsed = new URL(origin);
+    return (
+      parsed.origin === origin &&
+      parsed.host === host &&
+      parsed.protocol === new URL(request.url).protocol
+    );
+  } catch {
+    return false;
+  }
 }
 export async function limitedBody(request: Request) {
   const reader = request.body?.getReader();

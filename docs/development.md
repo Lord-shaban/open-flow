@@ -21,7 +21,7 @@ Unlock the studio using `OPEN_FLOW_OWNER_TOKEN` from `.env`. AI Horde works anon
 Start the Docker infrastructure and backend app services, then run the host web app on an available port. The root `.env` is not loaded by Next automatically:
 
 ```sh
-node --env-file=.env node_modules/next/dist/bin/next dev apps/web --hostname 127.0.0.1 --port 3001
+node --env-file=.env apps/web/node_modules/next/dist/bin/next dev apps/web --hostname 127.0.0.1 --port 3001
 ```
 
 Alternatively, `pnpm dev` previews the interface without a configured owner session. For a production preview after `pnpm build`, use `node --env-file=.env scripts/start-web.mjs` with port 3000 available. Set `OPEN_FLOW_API_URL` to the host Go API URL. Never use `NEXT_PUBLIC_*` for owner or provider secrets.
