@@ -50,7 +50,7 @@ func (s *Store) dispatchOne(ctx context.Context, target any, start StartFunc) (b
 	var job Job
 	var attempt int
 	err = tx.QueryRow(ctx, `SELECT id::text, owner_id::text, kind, workflow_id, dispatch_attempts + 1
-		FROM jobs WHERE dispatch_state = 'pending' AND kind = 'foundation_probe' AND dispatch_next_at <= now()
+		FROM jobs WHERE dispatch_state = 'pending' AND kind IN ('foundation_probe','image') AND dispatch_next_at <= now()
 		AND ($1::uuid IS NULL OR id = $1::uuid)
 		ORDER BY dispatch_next_at, created_at, id LIMIT 1 FOR UPDATE SKIP LOCKED`, target).Scan(
 		&job.ID, &job.OwnerID, &job.Kind, &job.WorkflowID, &attempt)
@@ -143,10 +143,18 @@ func (s *Store) relayOne(ctx context.Context, target any, publish PublishFunc) (
 
 func ValidateJobEvent(event events.Envelope) error {
 	if event.Validate() != nil || !validID(event.EventID) || !validID(event.AggregateID) ||
-		(event.Type != "job.queued" && event.Type != "job.succeeded") {
+		!validJobType(event.Type) {
 		return ErrInvalid
 	}
 	return nil
+}
+
+func validJobType(value string) bool {
+	switch value {
+	case "job.queued", "job.submitting", "job.running", "job.succeeded", "job.failed", "job.reconciliation_required":
+		return true
+	}
+	return false
 }
 
 // ApplyEvent commits the inbox identity and projection effect together. Older

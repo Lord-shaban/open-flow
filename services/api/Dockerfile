@@ -6,10 +6,11 @@ COPY . .
 RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/api ./cmd/api && \
     CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/worker ./cmd/worker && \
     CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/pipeline ./cmd/pipeline && \
-    CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/migrate ./cmd/migrate
+    CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/migrate ./cmd/migrate && \
+    CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/storage-gc ./cmd/storage-gc
 FROM alpine:3.23
 RUN apk add --no-cache ca-certificates && addgroup -S openflow && adduser -S -G openflow openflow
-COPY --from=build /out/api /out/worker /out/pipeline /out/migrate /usr/local/bin/
+COPY --from=build /out/api /out/worker /out/pipeline /out/migrate /out/storage-gc /usr/local/bin/
 USER openflow
 ENV OPEN_FLOW_HTTP_ADDR=0.0.0.0:8080
 EXPOSE 8080
