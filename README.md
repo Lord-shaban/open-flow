@@ -1,68 +1,60 @@
 # Open Flow
 
-**A Gemini-first, open-source AI media gateway.** Bring your own provider credentials, generate images and videos, and understand how each request is routed.
+**A free-first image studio and system-design learning project.** Create images through AI Horde without an account or card, or connect your own free Cloudflare Workers AI account. Kafka and Temporal run locally alongside PostgreSQL and private SeaweedFS object storage.
 
-> Foundation with the first M1 infrastructure slice. The Go API, Next.js workspace and durable PostgreSQL → Temporal → Kafka learning pipeline are available. Credential management, provider calls, image/video generation and smart routing are tracked work; they are not implemented yet.
+M1 implements owner access, encrypted credentials, verified model discovery, durable image generation, private downloads and a responsive creative workspace inspired by [Google Flow](https://flow.google). Video and automatic routing remain later milestones. Gemini image generation is disabled because it requires paid billing.
 
-## Why Open Flow?
+## Start the full studio
 
-Media providers differ in model discovery, credentials, asynchronous operations and failure behavior. Open Flow is designed to normalize them behind a provider adapter contract, make long-running jobs durable, keep credentials server-side, and expose one versioned API.
-
-Google Gemini is the primary provider. Vertex AI, fal, Replicate and Hugging Face are planned integrations. Only provider-permitted credentials and quotas are supported.
-
-## Quick start
-
-Requirements: Node.js 24 LTS, pnpm 11.25.0 and Go 1.27+.
+Install Docker Compose, Node.js 24 and pnpm 11.25.0. Go 1.27 is needed only when running backend processes outside Docker.
 
 ```sh
 git clone https://github.com/Lord-shaban/open-flow.git
 cd open-flow
 pnpm install --frozen-lockfile
-pnpm dev
+pnpm setup:local
+docker compose --env-file .env -f infra/compose.yaml --profile app up -d --build
 ```
 
-In another terminal, run `cd services/api` then `go run ./cmd/api`.
+Open http://localhost:3000 and unlock with `OPEN_FLOW_OWNER_TOKEN` from the generated, ignored `.env` file. Setup never overwrites existing secrets. AI Horde needs no provider key. Choose **Training canvas · Not AI** for entirely local procedural images, or configure optional ComfyUI for local AI inference.
 
-Open http://localhost:3000; check http://127.0.0.1:8080/healthz. No API keys are required. See [development](docs/development.md) for checks and Docker setup.
+Infrastructure is self-hosted open-source software; no managed subscription, billing account or card is required. Your machine supplies compute, disk and electricity. Hosted free providers have limits, queues and privacy policies: see [free providers](docs/providers/free-providers.md). Cloudflare requires a Workers Free account without a payment method; Open Flow cannot verify the billing plan of an arbitrary existing account.
 
-## Architecture
+For UI-only development, run `pnpm dev`. Generation requires the full stack. See [development](docs/development.md) for setup, checks and recovery exercises.
+
+## Implemented architecture
 
 ```mermaid
 flowchart LR
-  UI[Next.js / API client] --> API[Go API]
-  API --> DB[(PostgreSQL jobs)]
-  DB --> Temporal[Temporal workflows]
-  Temporal --> Worker[Go worker]
-  Worker --> Router[Explainable router]
-  Router --> Providers[Gemini / Vertex / adapters]
-  Worker --> Storage[(Private S3 / R2)]
-  DB --> Outbox[Outbox relay]
-  Outbox --> Kafka[Kafka events]
-  Kafka --> Consumers[Usage / analytics]
+  Browser[Next.js studio] --> BFF[HttpOnly owner session]
+  BFF --> API[Go API]
+  API --> PG[(PostgreSQL encrypted inputs / jobs)]
+  PG --> Dispatch[Stable workflow dispatcher]
+  Dispatch --> Temporal[Temporal]
+  Temporal --> Worker[Go activities]
+  Worker --> Providers[AI Horde / Workers AI / local adapters]
+  Worker --> Storage[(Private SeaweedFS S3)]
+  Worker --> PG
+  PG --> Outbox[Transactional outbox]
+  Outbox --> Kafka[Kafka lifecycle events]
+  Kafka --> Inbox[Deduplicated projection consumer]
   Storage --> API
 ```
 
-The diagram describes the target system. Implemented slices include the web entry point, HTTP foundation, provider/event interfaces, PostgreSQL migrations, a persisted Temporal probe, workflow dispatcher, Kafka outbox relay and inbox-backed training projection. See [durable pipeline](docs/persistence.md) for operation and crash-recovery exercises. Provider generation, storage and billing consumers remain planned.
+Submission intent is committed once before contacting a provider. An unknown acceptance enters `reconciliation_required`; it never triggers automatic resubmission, provider fallback or key cycling. Prompts and provider credentials remain encrypted in PostgreSQL; Temporal history and Kafka events contain IDs and coarse states.
 
-## Repository
+## Repository and roadmap
 
-| Path           | Purpose                                               |
-| -------------- | ----------------------------------------------------- |
-| `apps/web`     | Next.js App Router, TypeScript and Tailwind           |
-| `services/api` | Go HTTP service and provider contracts                |
-| `api`          | Versioned OpenAPI contract                            |
-| `docs`         | Architecture, ADRs, providers, deployment and backlog |
-| `infra`        | Docker development configuration                      |
-| `scripts`      | Repository quality and GitHub planning helpers        |
+| Path           | Purpose                                                                            |
+| -------------- | ---------------------------------------------------------------------------------- |
+| `apps/web`     | Next.js App Router, TypeScript, Tailwind and accessible Radix primitives           |
+| `services/api` | Go API, adapters, Temporal worker, dispatcher, Kafka relay/consumer and storage GC |
+| `api`          | Versioned OpenAPI contract                                                         |
+| `docs`         | Architecture, ADRs, providers, operations and backlog                              |
+| `infra`        | Local Docker Compose infrastructure                                                |
 
-## Roadmap and contributions
+[Project plan](docs/project-plan.md) · [Issues](https://github.com/Lord-shaban/open-flow/issues) · [Milestones](https://github.com/Lord-shaban/open-flow/milestones)
 
-[Project plan](docs/project-plan.md) · [GitHub Issues](https://github.com/Lord-shaban/open-flow/issues) · [Milestones](https://github.com/Lord-shaban/open-flow/milestones)
+M0 foundation → M1 free image studio → M2 video/resilience → M3 routing → M4 production hardening. Future integrations must meet the user's free/no-card requirement before activation.
 
-M0 foundation → M1 Gemini images → M2 video and resilience → M3 provider routing → M4 production hardening.
-
-Read [CONTRIBUTING](CONTRIBUTING.md), [architecture](docs/architecture.md), [adding a provider](docs/providers/adding-a-provider.md), [API](docs/api.md) and [Gemini setup](docs/providers/gemini.md). Use a focused issue and PR; CI never makes paid provider calls.
-
-## Security and license
-
-Never commit credentials. Report vulnerabilities through [SECURITY.md](SECURITY.md). Open Flow is licensed under [MIT](LICENSE).
+Read [CONTRIBUTING](CONTRIBUTING.md), [architecture](docs/architecture.md), [API](docs/api.md), [durable pipeline](docs/persistence.md) and [adding a provider](docs/providers/adding-a-provider.md). CI uses fixtures and a procedural adapter; it never calls paid image endpoints. Report vulnerabilities through [SECURITY](SECURITY.md). Licensed under [MIT](LICENSE).

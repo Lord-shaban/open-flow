@@ -3,4 +3,7 @@ node_modules
 pnpm-lock.yaml
 services/api/go.sum
 services/api/**/*.go
+apps/web/test-results
+apps/web/playwright-report
+artifacts
 apps/web/next-env.d.ts

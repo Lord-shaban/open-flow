@@ -57,7 +57,7 @@ jobs:
       - run: docker build -t open-flow-web -f apps/web/Dockerfile .
   infrastructure-smoke:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 25
     env:
       OPEN_FLOW_DATABASE_URL: postgres://open_flow:local-development-only@127.0.0.1:5432/open_flow?sslmode=disable
     steps:
@@ -66,7 +66,7 @@ jobs:
         with:
           go-version-file: services/api/go.mod
           cache-dependency-path: services/api/go.sum
-      - run: docker compose -f infra/compose.yaml up -d --wait postgres temporal-postgres temporal temporal-ui kafka
+      - run: docker compose -f infra/compose.yaml up -d --wait postgres temporal-postgres temporal temporal-ui kafka seaweedfs
       - run: docker compose -f infra/compose.yaml run --rm kafka-init
       - run: docker compose -f infra/compose.yaml run --rm kafka-jobs-init
       - name: Run Kafka and Temporal probes
@@ -80,10 +80,48 @@ jobs:
           go run ./cmd/temporal-smoke
           go run ./cmd/kafka-smoke
           go run ./cmd/pipeline-smoke
+          go run ./cmd/image-smoke
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      - run: pnpm --filter @open-flow/web exec playwright install --with-deps chromium
+      - name: Verify browser to workflow to private storage
+        env:
+          OPEN_FLOW_OWNER_TOKEN: ci-only-owner-token-never-a-real-secret-0001
+          OPEN_FLOW_ENCRYPTION_KEYS: '{"1":"BwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwc="}'
+          OPEN_FLOW_S3_ACCESS_KEY: open-flow-ci
+          OPEN_FLOW_S3_SECRET_KEY: local-storage-ci-only
+          OPEN_FLOW_API_URL: http://127.0.0.1:8080
+        run: |
+          (cd services/api && go build -o /tmp/open-flow-api ./cmd/api && go build -o /tmp/open-flow-pipeline ./cmd/pipeline)
+          /tmp/open-flow-api > /tmp/open-flow-api.log 2>&1 &
+          api_pid=$!
+          /tmp/open-flow-worker > /tmp/open-flow-worker.log 2>&1 &
+          worker_pid=$!
+          /tmp/open-flow-pipeline dispatch > /tmp/open-flow-dispatch.log 2>&1 &
+          dispatch_pid=$!
+          trap 'kill "$api_pid" "$worker_pid" "$dispatch_pid" || true' EXIT
+          for attempt in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:8080/readyz; then break; fi
+            sleep 1
+          done
+          pnpm --filter @open-flow/web exec playwright test
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: studio-browser-results
+          path: apps/web/test-results
+          if-no-files-found: ignore
       - name: Collect infrastructure logs
         if: always()
         run: |
           docker compose -f infra/compose.yaml logs --no-color
           if [ -f /tmp/open-flow-worker.log ]; then cat /tmp/open-flow-worker.log; fi
+          if [ -f /tmp/open-flow-api.log ]; then cat /tmp/open-flow-api.log; fi
+          if [ -f /tmp/open-flow-dispatch.log ]; then cat /tmp/open-flow-dispatch.log; fi
       - if: always()
         run: docker compose -f infra/compose.yaml down

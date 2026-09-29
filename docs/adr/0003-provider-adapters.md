@@ -7,7 +7,7 @@
 
 Adapters implement discovery, connection health, submission, operation polling and best-effort cancellation. Models declare image/video generation explicitly. Normalize provider errors with category, Retry-After and whether acceptance is known. Use a registry; routing consumes metadata and interfaces.
 
-Gemini Developer API is primary. Vertex AI is a separate adapter with project/location and ADC/workload identity. Future fal, Replicate and Hugging Face implementations must pass the same contract fixtures.
+M1 amendment (2026-09-29): the user's free/no-card requirement replaces the original Gemini-first priority. AI Horde is default, Workers AI Free optional, and ComfyUI local inference optional. Training canvas is a procedural test adapter, not AI. Gemini SDK integration remains available for discovery/testing, while generation is blocked. Vertex AI, fal, Replicate and other paid integrations remain inactive and would need an explicitly accepted scope change plus contract fixtures.
 
 ## Consequences
 

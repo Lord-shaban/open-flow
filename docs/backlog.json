@@ -7,8 +7,8 @@
       "description": "Repository governance, architecture, CI, Go/Next.js foundation, Kafka and Temporal development infrastructure with smoke paths."
     },
     {
-      "title": "M1 · Gemini image MVP",
-      "description": "Secure credentials, PostgreSQL read model and transactional outbox, Temporal image workflows, verified Gemini discovery, private storage, playground."
+      "title": "M1 · Free image studio",
+      "description": "Secure encrypted owner credentials, verified free-provider discovery, Temporal image workflows, private S3 storage and a Flow-inspired workspace. Paid generation disabled."
     },
     {
       "title": "M2 · Video and resilience",
@@ -79,7 +79,7 @@
     },
     {
       "id": "OF-005",
-      "milestone": "M1 · Gemini image MVP",
+      "milestone": "M1 · Free image studio",
       "title": "Add PostgreSQL persistence, transactional outbox and workflow dispatch",
       "labels": ["backend", "infrastructure"],
       "context": "Durably bridge database commits, Temporal workflow starts and Kafka events without lost jobs or untracked dual writes.",
@@ -92,7 +92,7 @@
     },
     {
       "id": "OF-006",
-      "milestone": "M1 · Gemini image MVP",
+      "milestone": "M1 · Free image studio",
       "title": "Implement single-owner access and encrypted BYOK credentials",
       "labels": ["backend", "feature"],
       "context": "API keys need explicit ownership and server-side protection before provider calls.",
@@ -105,23 +105,23 @@
     },
     {
       "id": "OF-007",
-      "milestone": "M1 · Gemini image MVP",
-      "title": "Implement Gemini adapter and verified model discovery",
+      "milestone": "M1 · Free image studio",
+      "title": "Implement free image adapters and verified model discovery",
       "labels": ["provider", "backend"],
-      "context": "Gemini is the default provider; availability and media capabilities must be verified.",
+      "context": "User scope amendment: free services without a card. AI Horde is default, Workers AI Free optional; retain official Gemini SDK discovery with image generation disabled.",
       "acceptance": [
-        "Use current official Google Gen AI Go SDK with Developer API credentials and bounded HTTP timeouts.",
-        "Normalize discovery using verified image/video metadata; do not equate generateContent support with image generation.",
-        "Add connection tests with structured auth/quota errors, pagination/cache handling, and fixture-based SDK contract tests."
+        "Discover live worker-backed Horde image models and verified Workers AI FLUX.1 Schnell; support local ComfyUI and a clearly labeled procedural training adapter.",
+        "Retain current official Google Gen AI Go SDK discovery with verified metadata, bounded pagination/cache, sanitized connection errors; mark paid models unselectable.",
+        "Test inline artifact transport, URL rejection, free-plan confirmation, quota and ambiguous submission errors with fixtures; perform no paid CI calls."
       ],
       "dependencies": ["OF-006"]
     },
     {
       "id": "OF-008",
-      "milestone": "M1 · Gemini image MVP",
-      "title": "Implement asynchronous Gemini image generation API",
+      "milestone": "M1 · Free image studio",
+      "title": "Implement asynchronous free image generation API",
       "labels": ["feature", "backend"],
-      "context": "Users need a durable unified API before adding a complex UI.",
+      "context": "Submit owned image jobs through mandatory Temporal orchestration and Kafka lifecycle events, without paid providers or automatic failover.",
       "acceptance": [
         "Implement POST /v1/generations, GET /v1/generations/{id}, and paginated list per OpenAPI design.",
         "Return 202 and honor owner-scoped Idempotency-Key; conflicting payload returns 409.",
@@ -131,7 +131,7 @@
     },
     {
       "id": "OF-009",
-      "milestone": "M1 · Gemini image MVP",
+      "milestone": "M1 · Free image studio",
       "title": "Persist generated media in private S3-compatible storage",
       "labels": ["infrastructure", "backend"],
       "context": "Provider URLs can expire; artifacts need private, durable ownership.",
@@ -144,10 +144,10 @@
     },
     {
       "id": "OF-010",
-      "milestone": "M1 · Gemini image MVP",
+      "milestone": "M1 · Free image studio",
       "title": "Build provider onboarding and image playground",
       "labels": ["frontend", "feature"],
-      "context": "Make Gemini connection and generation understandable without exposing credentials.",
+      "context": "Provide a responsive Google Flow-inspired image workspace with anonymous Horde, optional encrypted free-tier connections, verified model selection and private results.",
       "acceptance": [
         "Add shadcn/ui primitives, secure provider forms, explicit connection results, and official credential instructions.",
         "Drive model selection from backend capabilities and show route reason, queued/running/failed/completed states.",

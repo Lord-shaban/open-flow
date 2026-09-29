@@ -1,6 +1,6 @@
 # Open Flow project plan
 
-Open Flow is an open-source, Gemini-first AI image and video gateway with bring-your-own credentials. The product name is **Open Flow**; repository and executable names use `open-flow`.
+Open Flow is an open-source, free-first image studio and system-design learning platform with bring-your-own credentials. The product name is **Open Flow**; repository and executable names use `open-flow`. The user's no-payment/no-card requirement supersedes the original Gemini-first plan; hosted paid generation stays disabled.
 
 ## First delivery
 
@@ -8,7 +8,7 @@ Establish M0 before implementing media generation: governance, documented archit
 
 ## Product outcomes
 
-1. Connect Gemini securely with clear credential instructions.
+1. Create through AI Horde without a card/account; connect optional Workers AI Free or local ComfyUI securely.
 2. Discover eligible image/video models and their actual capabilities.
 3. Submit durable jobs through a unified API or playground.
 4. Resume long-running operations, store private results, and explain failures.
@@ -26,20 +26,20 @@ Repository governance, architecture, contributor onboarding, CI, and runnable Go
 - **OF-003** — Bootstrap Go API and provider contract
 - **OF-004** — Bootstrap Next.js workspace and automated quality gates
 
-### M1 · Gemini image MVP
+### M1 · Free image studio
 
-Secure single-owner credentials, verified Gemini discovery, durable image jobs, private storage, and playground.
+Secure single-owner credentials, verified free-provider discovery, durable image jobs, private storage, and a Flow-inspired playground. AI Horde and Workers AI ship in M1; Gemini discovery remains available but generation is blocked. This is the accepted scope change on 2026-09-29.
 
 - **OF-005** — Add PostgreSQL persistence, transactional outbox and workflow dispatch
 - **OF-006** — Implement single-owner access and encrypted BYOK credentials
-- **OF-007** — Implement Gemini adapter and verified model discovery
-- **OF-008** — Implement asynchronous Gemini image generation API
+- **OF-007** — Implement free-provider adapters and verified model discovery; retain Gemini discovery only
+- **OF-008** — Implement asynchronous free image generation API
 - **OF-009** — Persist generated media in private S3-compatible storage
 - **OF-010** — Build provider onboarding and image playground
 
 ### M2 · Video and resilience
 
-Restart-safe Veo operations, retries, cancellation, job history, and usage accounting.
+Restart-safe video operations, retries, cancellation and usage accounting, conditional on a verified free/no-card provider. Basic image history and details are already implemented in M1. Paid Veo is not activated by this plan.
 
 - **OF-011** — Implement restart-safe Veo video operations
 - **OF-012** — Add failure classification, retry budgets, and cancellation
