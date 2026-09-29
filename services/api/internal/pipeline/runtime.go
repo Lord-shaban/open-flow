@@ -1,10 +1,11 @@
 package pipeline
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
+	"io"
 	"log/slog"
 	"time"
 
@@ -71,8 +72,14 @@ func ConsumeOne(ctx context.Context, reader MessageReader, store ConsumerStore, 
 		return events.Envelope{}, false, err
 	}
 	var event events.Envelope
-	if err = json.Unmarshal(message.Value, &event); err != nil {
+	decoder := json.NewDecoder(bytes.NewReader(message.Value))
+	decoder.DisallowUnknownFields()
+	if err = decoder.Decode(&event); err != nil {
 		return event, false, errors.New("invalid job event JSON; offset not committed")
+	}
+	var trailing any
+	if err = decoder.Decode(&trailing); !errors.Is(err, io.EOF) {
+		return event, false, errors.New("trailing job event JSON; offset not committed")
 	}
 	if string(message.Key) != event.AggregateID {
 		return event, false, errors.New("job event partition key mismatch; offset not committed")
@@ -113,7 +120,7 @@ func RunConsumer(ctx context.Context, reader MessageReader, store ConsumerStore)
 				return nil
 			}
 			// Stop on poison messages; operators fix/redrive before restarting.
-			return fmt.Errorf("job consumer stopped before committing offset")
+			return errors.New("job consumer stopped before committing offset")
 		}
 	}
 	return nil

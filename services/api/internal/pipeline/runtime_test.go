@@ -59,7 +59,7 @@ func TestConsumeCommitsAfterDurableEffects(t *testing.T) {
 }
 
 func TestConsumeRejectsPoisonAndWrongKeys(t *testing.T) {
-	for _, value := range []string{`{`, `{"aggregate_id":"different"}`} {
+	for _, value := range []string{`{`, `{"aggregate_id":"different"}`, `{"aggregate_id":"job","unknown":"value"}`, `{"aggregate_id":"job"} {}`} {
 		reader := &fakeReader{message: kafka.Message{Key: []byte("job"), Value: []byte(value)}}
 		store := &fakeStore{}
 		if _, _, err := ConsumeOne(context.Background(), reader, store, "consumer"); err == nil || reader.committed || store.called {
