@@ -28,7 +28,7 @@ jobs:
       run:
         working-directory: services/api
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-go@v5
         with:
           go-version-file: services/api/go.mod
@@ -39,7 +39,7 @@ jobs:
   frontend:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
@@ -51,7 +51,7 @@ jobs:
   containers:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - run: docker compose -f infra/compose.yaml config --quiet
       - run: docker build -t open-flow-api services/api
       - run: docker build -t open-flow-web -f apps/web/Dockerfile .
@@ -61,7 +61,7 @@ jobs:
     env:
       OPEN_FLOW_DATABASE_URL: postgres://open_flow:local-development-only@127.0.0.1:5432/open_flow?sslmode=disable
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-go@v5
         with:
           go-version-file: services/api/go.mod
